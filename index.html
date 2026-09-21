@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5b55">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Puppy Tracker</title>
+<style>
+:root{--ink:#24302f;--muted:#697674;--bg:#f7f7f4;--card:#fff;--accent:#0f5b55;--line:#dfe5e2;--danger:#b33b3b}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:18px 18px 10px;position:sticky;top:0;background:rgba(247,247,244,.95);backdrop-filter:blur(10px);z-index:5}
+h1{margin:0;font-size:28px}.date{color:var(--muted);margin-top:3px}
+nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:7px 4px calc(7px + env(safe-area-inset-bottom));z-index:10}
+nav button{flex:1;border:0;background:none;color:var(--muted);font-size:12px;padding:7px 2px}nav button.active{color:var(--accent);font-weight:700}
+main{padding:8px 16px 95px;max-width:720px;margin:auto}.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.eventbtn{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:15px 6px;min-height:88px;font-weight:700;color:var(--ink);box-shadow:0 2px 8px #00000008}.eventbtn span{display:block;font-size:27px;margin-bottom:5px}.eventbtn.running{background:#e7f3f0;border-color:var(--accent);color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin:12px 0}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{text-align:center}.stat b{display:block;font-size:21px}.stat small{color:var(--muted)}
+h2{font-size:18px;margin:20px 0 9px}h3{margin:0 0 8px}.row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.grow{flex:1}.muted{color:var(--muted);font-size:13px}
+button{font:inherit;cursor:pointer}.primary{background:var(--accent);color:#fff;border:0;border-radius:13px;padding:11px 15px;font-weight:700}.secondary{background:#eef2f0;border:0;border-radius:12px;padding:9px 12px}.danger{color:var(--danger)}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;font:inherit}textarea{min-height:80px}
+.formrow{margin:12px 0}.formrow label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:20}.modal.show{display:flex}.sheet{background:var(--bg);width:100%;max-height:90vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(25px + env(safe-area-inset-bottom));}.sheethead{display:flex;justify-content:space-between;align-items:center}
+.badge{display:inline-block;background:#edf3f1;color:var(--accent);border-radius:999px;padding:4px 8px;font-size:12px}.empty{text-align:center;color:var(--muted);padding:25px 5px}
+canvas{width:100%;height:230px}.pillrow{display:flex;gap:7px;overflow:auto}.pill{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px}.pill.active{background:var(--accent);color:#fff}
+.smallbtn{border:0;background:none;color:var(--danger);padding:5px}
+</style>
+</head>
+<body>
+<header><h1>Puppy Tracker</h1><div class="date" id="date"></div></header>
+<main>
+<section id="today" class="view active">
+  <div class="stats card">
+    <div class="stat"><b id="peeCount">0</b><small>Pee</small></div>
+    <div class="stat"><b id="poopCount">0</b><small>Poop</small></div>
+    <div class="stat"><b id="sleepTotal">0m</b><small>Sleep</small></div>
+  </div>
+  <h2>Log an event</h2>
+  <div class="grid" id="quickGrid"></div>
+  <div id="runningCard"></div>
+  <h2>Today</h2>
+  <div class="card" id="timeline"></div>
+</section>
+
+<section id="trends" class="view">
+  <div class="card">
+    <div class="pillrow" id="rangePills">
+      <button class="pill active" data-days="3">3 days</button><button class="pill" data-days="7">7 days</button><button class="pill" data-days="14">14 days</button><button class="pill" data-days="30">30 days</button>
+    </div>
+  </div>
+  <div class="card"><h3>Potty events</h3><canvas id="chart"></canvas></div>
+  <div class="card"><h3>Automatic summaries</h3><div id="summary"></div></div>
+  <div class="card"><h3>Potty relative to sleep & meals</h3><div id="relationships"></div></div>
+</section>
+
+<section id="history" class="view">
+  <div class="card"><input id="search" placeholder="Search events or notes"></div>
+  <div class="card" id="historyList"></div>
+</section>
+
+<section id="settings" class="view">
+  <div class="card"><h3>Custom categories</h3><div id="categoryList"></div><button class="primary" id="addCategoryBtn">Add category</button></div>
+  <div class="card"><h3>Day / night</h3><div class="two"><div class="formrow"><label>Day starts</label><input type="time" id="dayStart" value="07:00"></div><div class="formrow"><label>Night starts</label><input type="time" id="nightStart" value="22:00"></div></div><button class="secondary" id="saveTimes">Save times</button></div>
+  <div class="card"><h3>Data</h3><p class="muted">Events stay on this device. Export a CSV backup whenever you want.</p><button class="primary" id="exportBtn">Export CSV</button></div>
+</section>
+</main>
+
+<nav>
+<button data-view="today" class="active">Today</button><button data-view="trends">Trends</button><button data-view="history">History</button><button data-view="settings">Settings</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet"><div class="sheethead"><h2 id="modalTitle">Add event</h2><button class="secondary" id="closeModal">Close</button></div><div id="modalBody"></div></div></div>
+
+<script>
+const KEY='puppyTrackerEventsV1', CATKEY='puppyTrackerCatsV1', SETKEY='puppyTrackerSettingsV1';
+const builtins=[
+ {name:'Pee',icon:'💧',kind:'instant'},{name:'Poop',icon:'💩',kind:'instant'},{name:'Potty - Nothing',icon:'✕',kind:'instant'},
+ {name:'Sleep',icon:'💤',kind:'timed'},{name:'Crate',icon:'🏠',kind:'timed'},{name:'Whining',icon:'🔊',kind:'timed'},{name:'Meal',icon:'🍽️',kind:'quantity'}
+];
+let events=JSON.parse(localStorage.getItem(KEY)||'[]'), cats=JSON.parse(localStorage.getItem(CATKEY)||'null')||builtins, settings=JSON.parse(localStorage.getItem(SETKEY)||'{"dayStart":"07:00","nightStart":"22:00"}');
+let activeRange=3;
+
+const $=id=>document.getElementById(id);
+const save=()=>{localStorage.setItem(KEY,JSON.stringify(events));localStorage.setItem(CATKEY,JSON.stringify(cats));localStorage.setItem(SETKEY,JSON.stringify(settings));};
+const fmtTime=d=>new Date(d).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+const fmtDate=d=>new Date(d).toLocaleDateString([], {month:'short',day:'numeric'});
+function dur(ms){if(ms<60000)return Math.round(ms/1000)+' sec';let m=Math.round(ms/60000);if(m<60)return m+' min';let h=Math.floor(m/60),r=m%60;return r?h+' hr '+r+' min':h+' hr'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function iconFor(name){return cats.find(c=>c.name===name)?.icon||'🐾'}
+function todayEvents(){let a=new Date();return events.filter(e=>new Date(e.start).toDateString()===a.toDateString()).sort((a,b)=>new Date(b.start)-new Date(a.start))}
+function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.add('show')}
+$('closeModal').onclick=()=>$('modal').classList.remove('show');
+
+function renderQuick(){
+ $('quickGrid').innerHTML=cats.map(c=>`<button class="eventbtn" onclick="logCategory('${esc(c.name)}')"><span>${c.icon}</span>${esc(c.name)}</button>`).join('');
+}
+function logCategory(name){
+ const c=cats.find(x=>x.name===name);
+ if(c.kind==='timed'){
+   let running=events.find(e=>e.name===name && !e.end);
+   if(running){running.end=new Date().toISOString();save();renderAll();return}
+   events.push({id:crypto.randomUUID(),name,icon:c.icon,kind:c.kind,start:new Date().toISOString(),end:null,qty:null,notes:''});
+   save(); renderAll(); return;
+ }
+ let fields=`<div class="formrow"><label>Time</label><input id="evTime" type="datetime-local" value="${localDateTime()}"></div>`;
+ if(c.kind==='quantity') fields+=`<div class="formrow"><label>Amount (optional)</label><input id="evQty" type="number" step="any" placeholder="e.g. 0.5"></div>`;
+ fields+=`<div class="formrow"><label>Notes</label><textarea id="evNotes" placeholder="What happened?"></textarea></div><button class="primary" onclick="saveInstant('${esc(name)}')">Save</button>`;
+ openModal('Log '+name,fields);
+}
+function localDateTime(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+window.saveInstant=name=>{
+ let c=cats.find(x=>x.name===name), t=new Date($('evTime').value);
+ events.push({id:crypto.randomUUID(),name,icon:c.icon,kind:c.kind,start:t.toISOString(),end:null,qty:$('evQty')?Number($('evQty').value)||null:null,notes:$('evNotes').value});
+ save();$('modal').classList.remove('show');renderAll();
+};
+
+function renderToday(){
+ let a=todayEvents(), pees=a.filter(e=>e.name==='Pee').length, poops=a.filter(e=>e.name==='Poop').length;
+ $('peeCount').textContent=pees;$('poopCount').textContent=poops;
+ $('sleepTotal').textContent=dur(a.filter(e=>e.name==='Sleep'&&e.end).reduce((s,e)=>s+(new Date(e.end)-new Date(e.start)),0)||0);
+ let running=events.filter(e=>!e.end);
+ $('runningCard').innerHTML=running.length?`<div class="card"><h3>Currently active</h3>${running.map(e=>`<div class="row"><span>${e.icon}</span><div class="grow"><b>${esc(e.name)}</b><div class="muted">Started ${fmtTime(e.start)} · ${dur(Date.now()-new Date(e.start))}</div></div><button class="primary" onclick="stopEvent('${e.id}')">STOP</button></div>`).join('')}</div>`:'';
+ $('timeline').innerHTML=a.length?a.map(e=>`<div class="row"><span>${e.icon}</span><div class="grow"><b>${esc(e.name)}</b><div class="muted">${fmtTime(e.start)}${e.end?' · '+dur(new Date(e.end)-new Date(e.start)):''}${e.qty?' · '+e.qty:''}</div>${e.notes?`<div class="muted">${esc(e.notes)}</div>`:''}</div><button class="smallbtn" onclick="editEvent('${e.id}')">Edit</button></div>`).join(''):'<div class="empty">No events yet.</div>';
+}
+window.stopEvent=id=>{let e=events.find(x=>x.id===id);if(e){e.end=new Date().toISOString();save();renderAll()}};
+window.editEvent=id=>{
+ let e=events.find(x=>x.id===id); if(!e)return;
+ openModal('Edit event',`<div class="formrow"><label>Notes</label><textarea id="editNotes">${esc(e.notes)}</textarea></div><button class="primary" onclick="updateEvent('${id}')">Save changes</button><button class="secondary" style="margin-left:8px" onclick="deleteEvent('${id}')">Delete</button>`);
+};
+window.updateEvent=id=>{let e=events.find(x=>x.id===id);e.notes=$('editNotes').value;save();$('modal').classList.remove('show');renderAll()};
+window.deleteEvent=id=>{events=events.filter(e=>e.id!==id);save();$('modal').classList.remove('show');renderAll()};
+
+function averageInterval(name){
+ let a=events.filter(e=>e.name===name).sort((x,y)=>new Date(x.start)-new Date(y.start));if(a.length<2)return 'Not enough data';
+ let vals=[];for(let i=1;i<a.length;i++)vals.push(new Date(a[i].start)-new Date(a[i-1].start));return dur(vals.reduce((a,b)=>a+b,0)/vals.length)
+}
+function avgDuration(name){let a=events.filter(e=>e.name===name&&e.end).map(e=>new Date(e.end)-new Date(e.start));return a.length?dur(a.reduce((x,y)=>x+y,0)/a.length):'No data'}
+function totalDuration(name){let a=events.filter(e=>e.name===name&&e.end).map(e=>new Date(e.end)-new Date(e.start));return dur(a.reduce((x,y)=>x+y,0)||0)}
+function nearestBefore(time,names){
+ let a=events.filter(e=>names.includes(e.name)&&new Date(e.start)<=time).sort((x,y)=>new Date(y.start)-new Date(x.start));return a[0]
+}
+function relationshipText(){
+ let p=events.filter(e=>e.name==='Pee'), wake=events.filter(e=>e.name==='Sleep'&&e.end), meals=events.filter(e=>e.name==='Meal');
+ function avgAfter(list, targets){let vals=[];for(let e of list){let prior=targets.filter(x=>new Date(x.end||x.start)<=new Date(e.start)).sort((a,b)=>new Date(b.end||b.start)-new Date(a.end||a.start))[0];if(prior)vals.push(new Date(e.start)-new Date(prior.end||prior.start))}return vals.length?dur(vals.reduce((a,b)=>a+b,0)/vals.length):'No data'}
+ return `<div class="row"><div class="grow">Average pee after waking</div><b>${avgAfter(p,wake)}</b></div><div class="row"><div class="grow">Average pee after meal</div><b>${avgAfter(p,meals)}</b></div>`;
+}
+function renderTrends(){
+ $('summary').innerHTML=[['Average time between pees',averageInterval('Pee')],['Average time between poops',averageInterval('Poop')],['Average sleep duration',avgDuration('Sleep')],['Average crate duration',avgDuration('Crate')],['Total whining',totalDuration('Whining')]].map(x=>`<div class="row"><span class="grow">${x[0]}</span><b>${x[1]}</b></div>`).join('');
+ $('relationships').innerHTML=relationshipText();
+ drawChart();
+}
+function drawChart(){
+ let canvas=$('chart'),ctx=canvas.getContext('2d'),w=canvas.clientWidth*devicePixelRatio,h=230*devicePixelRatio;canvas.width=w;canvas.height=h;ctx.clearRect(0,0,w,h);ctx.font=`${12*devicePixelRatio}px -apple-system`;
+ let now=new Date(),days=[];for(let i=activeRange-1;i>=0;i--){let d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-i);days.push(d)}
+ let max=Math.max(1,...days.map(d=>events.filter(e=>e.name==='Pee'&&new Date(e.start).toDateString()===d.toDateString()).length+events.filter(e=>e.name==='Poop'&&new Date(e.start).toDateString()===d.toDateString()).length));
+ ctx.strokeStyle='#dfe5e2';ctx.fillStyle='#697674';ctx.lineWidth=1;
+ for(let i=0;i<=max;i++){let y=h-25-(h-55)*i/max;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(w-10,y);ctx.stroke();ctx.fillText(i,8,y+4)}
+ days.forEach((d,i)=>{let x=45+i*((w-60)/Math.max(1,days.length-1));let pee=events.filter(e=>e.name==='Pee'&&new Date(e.start).toDateString()===d.toDateString()).length;let poop=events.filter(e=>e.name==='Poop'&&new Date(e.start).toDateString()===d.toDateString()).length;ctx.fillStyle='#0f5b55';ctx.fillRect(x-9,h-25-(h-55)*pee/max,8,(h-55)*pee/max);ctx.fillStyle='#d98a27';ctx.fillRect(x+1,h-25-(h-55)*poop/max,8,(h-55)*poop/max);ctx.fillStyle='#697674';ctx.fillText(d.toLocaleDateString([],{month:'numeric',day:'numeric'}),x-12,h-8)})
+}
+$('rangePills').onclick=e=>{if(e.target.dataset.days){activeRange=Number(e.target.dataset.days);document.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===e.target));renderTrends()}};
+
+function renderHistory(){
+ let q=$('search').value.toLowerCase(),a=[...events].sort((x,y)=>new Date(y.start)-new Date(x.start)).filter(e=>(e.name+' '+e.notes).toLowerCase().includes(q));
+ $('historyList').innerHTML=a.length?a.map(e=>`<div class="row"><span>${e.icon}</span><div class="grow"><b>${esc(e.name)}</b><div class="muted">${fmtDate(e.start)} · ${fmtTime(e.start)}${e.end?' · '+dur(new Date(e.end)-new Date(e.start)):''}</div>${e.notes?`<div class="muted">${esc(e.notes)}</div>`:''}</div></div>`).join(''):'<div class="empty">No matching events.</div>';
+}
+$('search').oninput=renderHistory;
+
+function renderSettings(){
+ $('dayStart').value=settings.dayStart;$('nightStart').value=settings.nightStart;
+ $('categoryList').innerHTML=cats.map((c,i)=>`<div class="row"><span>${c.icon}</span><div class="grow">${esc(c.name)} <span class="badge">${c.kind}</span></div>${i>=builtins.length?`<button class="smallbtn" onclick="removeCat('${esc(c.name)}')">Delete</button>`:''}</div>`).join('');
+}
+window.removeCat=name=>{cats=cats.filter(c=>c.name!==name);save();renderAll()};
+$('addCategoryBtn').onclick=()=>openModal('New category',`<div class="formrow"><label>Name</label><input id="catName" placeholder="e.g. Barking"></div><div class="formrow"><label>Emoji</label><input id="catIcon" value="🐾"></div><div class="formrow"><label>Type</label><select id="catKind"><option value="instant">Instant event</option><option value="timed">Timed event</option><option value="quantity">Quantity</option></select></div><button class="primary" onclick="saveCategory()">Save</button>`);
+window.saveCategory=()=>{let n=$('catName').value.trim();if(!n)return;cats.push({name:n,icon:$('catIcon').value||'🐾',kind:$('catKind').value});save();$('modal').classList.remove('show');renderAll()};
+$('saveTimes').onclick=()=>{settings.dayStart=$('dayStart').value;settings.nightStart=$('nightStart').value;save();alert('Saved')};
+$('exportBtn').onclick=()=>{
+ let rows=[['id','event','start','end','duration_seconds','quantity','notes','day_or_night']];
+ for(let e of events){let d=new Date(e.start), hm=d.toTimeString().slice(0,5), night=hm>=settings.nightStart||hm<settings.dayStart?'Night':'Day';rows.push([e.id,e.name,e.start,e.end||'',e.end?((new Date(e.end)-d)/1000):'',e.qty??'',e.notes,night])}
+ let csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='puppy_tracker.csv';a.click();URL.revokeObjectURL(url);
+};
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active');renderAll()});
+function renderAll(){$('date').textContent=new Date().toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'});renderQuick();renderToday();renderTrends();renderHistory();renderSettings()}
+renderAll();
+</script>
+</body>
+</html>
