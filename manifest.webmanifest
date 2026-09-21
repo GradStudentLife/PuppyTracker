@@ -1,0 +1,10 @@
+{
+  "name": "Puppy Tracker",
+  "short_name": "Puppy Tracker",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f7f4",
+  "theme_color": "#0f5b55",
+  "description": "Simple local puppy event tracker",
+  "icons": []
+}
