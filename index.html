@@ -93,8 +93,9 @@ textarea{min-height:80px}.formrow{margin:12px 0}.formrow label{display:block;fon
 <button class="secondary" id="saveTimes">Save times</button>
 </div>
 <div class="card">
-<h3>Data</h3><p class="muted">Events, categories, and saved trends stay on this device. Export a CSV backup whenever you want.</p>
+<h3>Data</h3><p class="muted">Events, categories, and saved trends stay on this device. Export a CSV backup whenever you want. The app also keeps a copy of the original browser data it finds during migration.</p>
 <button class="primary" id="exportBtn">Export CSV</button>
+<button class="secondary" id="backupBtn">Download raw backup</button>
 </div>
 </section>
 </main>
@@ -114,6 +115,127 @@ const KEY='puppyTrackerEventsV2';
 const CATKEY='puppyTrackerCatsV2';
 const SETKEY='puppyTrackerSettingsV2';
 const TRENDKEY='puppyTrackerTrendsV2';
+const BACKUPKEY='puppyTrackerOriginalBackupV1';
+
+const OLD_KEYS={
+  events:['puppyTrackerEvents','puppyEvents','events','puppy_tracker_events'],
+  cats:['puppyTrackerCategories','puppyTrackerCats','categories','puppy_categories'],
+  settings:['puppyTrackerSettings','settings','puppy_settings'],
+  trends:['puppyTrackerTrends','trends']
+};
+
+function readJSONKey(key){
+  try{
+    const raw=localStorage.getItem(key);
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+
+function findOldData(keys){
+  for(const k of keys){
+    const v=readJSONKey(k);
+    if(v!==null)return {key:k,value:v};
+  }
+  return null;
+}
+
+function looksLikeEventArray(v){
+  return Array.isArray(v)&&v.some(e=>e&&(
+    'time' in e || 'start' in e || 'timestamp' in e ||
+    'name' in e || 'category' in e || 'categoryId' in e
+  ));
+}
+
+function normalizeOldEvent(e,index){
+  const categoryName=e.categoryName||e.category||e.name||e.type||e.eventName||'Unknown';
+  let categoryId=e.categoryId||e.category_id||null;
+  let kind=e.kind||e.type||e.eventType||null;
+
+  if(kind==='one-time')kind='instant';
+  if(kind==='one_time')kind='instant';
+  if(kind==='duration')kind='timed';
+
+  const start=e.start||e.startTime||null;
+  const end=e.end||e.endTime||null;
+  const time=e.time||e.timestamp||e.dateTime||e.datetime||start||new Date().toISOString();
+
+  if(!kind){
+    kind=(start||end)?'timed':'instant';
+  }
+
+  return {
+    id:e.id||crypto.randomUUID(),
+    categoryId:categoryId,
+    legacyCategoryName:categoryName,
+    kind,
+    time:new Date(time).toString()!=='Invalid Date'?new Date(time).toISOString():new Date().toISOString(),
+    start:start&&new Date(start).toString()!=='Invalid Date'?new Date(start).toISOString():null,
+    end:end&&new Date(end).toString()!=='Invalid Date'?new Date(end).toISOString():null,
+    qty:e.qty??e.quantity??e.amount??null,
+    notes:e.notes??e.note??''
+  };
+}
+
+function migrateOldStorage(){
+  // Never overwrite old data. First preserve a complete backup if we find anything.
+  if(!localStorage.getItem(BACKUPKEY)){
+    const backup={};
+    let found=false;
+    for(const group of Object.keys(OLD_KEYS)){
+      const hit=findOldData(OLD_KEYS[group]);
+      if(hit){backup[group]={key:hit.key,value:hit.value};found=true;}
+    }
+    if(found)localStorage.setItem(BACKUPKEY,JSON.stringify({created:new Date().toISOString(),data:backup}));
+  }
+
+  const currentEvents=readJSONKey(KEY);
+  const currentCats=readJSONKey(CATKEY);
+  const currentSettings=readJSONKey(SETKEY);
+  const currentTrends=readJSONKey(TRENDKEY);
+
+  if(currentEvents===null){
+    const hit=findOldData(OLD_KEYS.events);
+    if(hit){
+      let source=hit.value;
+      if(source&&Array.isArray(source.events))source=source.events;
+      if(looksLikeEventArray(source)){
+        localStorage.setItem(KEY,JSON.stringify(source.map(normalizeOldEvent)));
+      }
+    }
+  }
+
+  if(currentCats===null){
+    const hit=findOldData(OLD_KEYS.cats);
+    if(hit){
+      let source=hit.value;
+      if(source&&Array.isArray(source.categories))source=source.categories;
+      if(Array.isArray(source)&&source.length){
+        const converted=source.map((c,i)=>({
+          id:c.id||c.categoryId||crypto.randomUUID(),
+          name:c.name||c.label||c.title||('Category '+(i+1)),
+          icon:c.icon||c.emoji||'🐾',
+          kind:c.kind||c.type||'instant',
+          notesRequired:c.notesRequired??c.requireNotes??true,
+          quantityEnabled:c.quantityEnabled??c.hasQuantity??(c.kind==='quantity'),
+          quantityLabel:c.quantityLabel||c.unit||'Amount'
+        }));
+        localStorage.setItem(CATKEY,JSON.stringify(converted));
+      }
+    }
+  }
+
+  if(currentSettings===null){
+    const hit=findOldData(OLD_KEYS.settings);
+    if(hit)localStorage.setItem(SETKEY,JSON.stringify(hit.value));
+  }
+
+  if(currentTrends===null){
+    const hit=findOldData(OLD_KEYS.trends);
+    if(hit)localStorage.setItem(TRENDKEY,JSON.stringify(hit.value));
+  }
+}
+
+migrateOldStorage();
 
 const builtins=[
 {id:'pee',name:'Pee',icon:'💧',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
@@ -132,10 +254,10 @@ const defaultTrends=[
 {id:'builtin-meal-pee',name:'Average pee after meal',measure:'after',fromCategoryId:'meal',toCategoryId:'pee',relationEnd:'time'}
 ];
 
-let events=JSON.parse(localStorage.getItem(KEY)||'[]');
-let cats=JSON.parse(localStorage.getItem(CATKEY)||'null')||builtins.map(x=>({...x}));
-let settings=JSON.parse(localStorage.getItem(SETKEY)||'{"dayStart":"07:00","nightStart":"22:00"}');
-let trends=JSON.parse(localStorage.getItem(TRENDKEY)||'null')||defaultTrends.map(x=>({...x}));
+let events=readJSONKey(KEY)||[];
+let cats=readJSONKey(CATKEY)||builtins.map(x=>({...x}));
+let settings=readJSONKey(SETKEY)||{"dayStart":"07:00","nightStart":"22:00"};
+let trends=readJSONKey(TRENDKEY)||defaultTrends.map(x=>({...x}));
 let activeRange=3;
 
 const $=id=>document.getElementById(id);
@@ -163,11 +285,24 @@ return hm>=settings.dayStart && hm<settings.nightStart;
 function migrate(){
 let changed=false;
 events=events.map(e=>{
-if(e.categoryId)return e;
-let c=cats.find(x=>x.name===e.name)||builtins.find(x=>x.name===e.name);
-if(c){e.categoryId=c.id;changed=true;}
-if(e.kind==='timed'&&!('end'in e)){e.end=null;changed=true;}
-return e;
+  if(!e.categoryId){
+    const oldName=e.legacyCategoryName||e.name||e.category||e.eventName||'';
+    let c=cats.find(x=>x.name===oldName);
+    if(!c)c=builtins.find(x=>x.name===oldName);
+    if(c){e.categoryId=c.id;changed=true;}
+    else{
+      // Preserve an unknown historical category instead of dropping the event.
+      c=cats.find(x=>x.id==='legacy-unknown');
+      if(!c){
+        c={id:'legacy-unknown',name:'Unknown / Legacy Event',icon:'🐾',kind:e.kind==='timed'?'timed':'instant',notesRequired:false,quantityEnabled:false,quantityLabel:'Amount'};
+        cats.push(c);
+      }
+      e.categoryId=c.id;changed=true;
+    }
+  }
+  if(e.kind==='timed'&&!('end'in e)){e.end=null;changed=true;}
+  if(e.kind==='timed'&&!e.start&&e.time){e.start=e.time;changed=true;}
+  return e;
 });
 if(changed)save();
 }
@@ -429,6 +564,15 @@ let rows=[['id','category_id','event','event_type','time','start','end','duratio
 for(let e of events){let d=new Date(eventTime(e)),hm=d.toTimeString().slice(0,5),night=hm>=settings.nightStart||hm<settings.dayStart?'Night':'Day';let start='',end='',duration='',time=e.kind==='timed'?'':e.time;if(e.kind==='timed'){start=e.start;end=e.end||'';duration=e.end?((new Date(e.end)-new Date(e.start))/1000):'';}rows.push([e.id,e.categoryId,nameFor(e.categoryId),e.kind,time,start,end,duration,e.qty??'',e.notes,night]);}
 let csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\\n');
 let blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='puppy_tracker.csv';a.click();URL.revokeObjectURL(url);
+};
+
+$('backupBtn').onclick=()=>{
+  const raw=localStorage.getItem(BACKUPKEY);
+  if(!raw){alert('No original-data backup was found.');return;}
+  const blob=new Blob([raw],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='puppy_tracker_original_backup.json';a.click();
+  URL.revokeObjectURL(url);
 };
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active');renderAll();});
