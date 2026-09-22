@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5b55">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Puppy Tracker</title>
+<style>
+:root{--ink:#24302f;--muted:#697674;--bg:#f7f7f4;--card:#fff;--accent:#0f5b55;--line:#dfe5e2;--danger:#b33b3b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:18px 18px 10px;position:sticky;top:0;background:rgba(247,247,244,.95);backdrop-filter:blur(10px);z-index:5}
+h1{margin:0;font-size:28px}.date{color:var(--muted);margin-top:3px}
+nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:7px 4px calc(7px + env(safe-area-inset-bottom));z-index:10}
+nav button{flex:1;border:0;background:none;color:var(--muted);font-size:12px;padding:7px 2px}
+nav button.active{color:var(--accent);font-weight:700}
+main{padding:8px 16px 95px;max-width:720px;margin:auto}
+.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.eventbtn{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:15px 6px;min-height:88px;font-weight:700;color:var(--ink);box-shadow:0 2px 8px #00000008}
+.eventbtn span{display:block;font-size:27px;margin-bottom:5px}.eventbtn.running{background:#e7f3f0;border-color:var(--accent);color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;margin:12px 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{text-align:center}.stat b{display:block;font-size:21px}.stat small{color:var(--muted)}
+h2{font-size:18px;margin:20px 0 9px}h3{margin:0 0 8px}
+.row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}
+.grow{flex:1}.muted{color:var(--muted);font-size:13px}
+button{font:inherit;cursor:pointer}.primary{background:var(--accent);color:#fff;border:0;border-radius:13px;padding:11px 15px;font-weight:700}
+.secondary{background:#eef2f0;border:0;border-radius:12px;padding:9px 12px}.danger{color:var(--danger)}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;font:inherit}
+textarea{min-height:80px}.formrow{margin:12px 0}.formrow label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:20}.modal.show{display:flex}
+.sheet{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(25px + env(safe-area-inset-bottom))}
+.sheethead{display:flex;justify-content:space-between;align-items:center}.badge{display:inline-block;background:#edf3f1;color:var(--accent);border-radius:999px;padding:4px 8px;font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:25px 5px}canvas{width:100%;height:230px}
+.pillrow{display:flex;gap:7px;overflow:auto}.pill{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px}.pill.active{background:var(--accent);color:#fff}
+.smallbtn{border:0;background:none;color:var(--danger);padding:5px}.mini{font-size:12px;padding:7px 10px}
+.checkrow{display:flex;align-items:center;gap:8px;margin:7px 0}.checkrow input{width:auto}
+.sectionnote{background:#edf3f1;border-radius:12px;padding:10px;font-size:13px;color:var(--muted);margin:10px 0}
+.trendcard h3{margin-bottom:4px}.trendvalue{font-size:22px;font-weight:700;margin-top:8px}.trendmeta{font-size:12px;color:var(--muted)}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+<header><h1>Puppy Tracker</h1><div class="date" id="date"></div></header>
+
+<main>
+<section id="today" class="view active">
+<div class="stats card">
+<div class="stat"><b id="peeCount">0</b><small>Pee</small></div>
+<div class="stat"><b id="poopCount">0</b><small>Poop</small></div>
+<div class="stat"><b id="sleepTotal">0m</b><small>Sleep</small></div>
+</div>
+<h2>Log an event</h2><div class="grid" id="quickGrid"></div>
+<div id="runningCard"></div>
+<h2>Today</h2><div class="card" id="timeline"></div>
+</section>
+
+<section id="trends" class="view">
+<div class="card">
+<div class="pillrow" id="rangePills">
+<button class="pill active" data-days="3">3 days</button><button class="pill" data-days="7">7 days</button>
+<button class="pill" data-days="14">14 days</button><button class="pill" data-days="30">30 days</button>
+</div>
+</div>
+<div class="card">
+<h3>My trends</h3>
+<div id="savedTrends"></div>
+<button class="primary" id="addTrendBtn">Create trend</button>
+</div>
+<div class="card"><h3>Potty events</h3><canvas id="chart"></canvas></div>
+</section>
+
+<section id="history" class="view">
+<div class="card"><input id="search" placeholder="Search events or notes"></div>
+<div class="card" id="historyList"></div>
+</section>
+
+<section id="settings" class="view">
+<div class="card">
+<h3>Categories</h3>
+<div class="sectionnote">Every category can be edited. Renaming a category does not erase its historical events.</div>
+<div id="categoryList"></div>
+<button class="primary" id="addCategoryBtn">Add category</button>
+</div>
+<div class="card">
+<h3>Day / night</h3>
+<div class="two">
+<div class="formrow"><label>Day starts</label><input type="time" id="dayStart" value="07:00"></div>
+<div class="formrow"><label>Night starts</label><input type="time" id="nightStart" value="22:00"></div>
+</div>
+<button class="secondary" id="saveTimes">Save times</button>
+</div>
+<div class="card">
+<h3>Data</h3><p class="muted">Events, categories, and saved trends stay on this device. Export a CSV backup whenever you want.</p>
+<button class="primary" id="exportBtn">Export CSV</button>
+</div>
+</section>
+</main>
+
+<nav>
+<button data-view="today" class="active">Today</button><button data-view="trends">Trends</button>
+<button data-view="history">History</button><button data-view="settings">Settings</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet">
+<div class="sheethead"><h2 id="modalTitle">Add event</h2><button class="secondary" id="closeModal">Close</button></div>
+<div id="modalBody"></div>
+</div></div>
+
+<script>
+const KEY='puppyTrackerEventsV2';
+const CATKEY='puppyTrackerCatsV2';
+const SETKEY='puppyTrackerSettingsV2';
+const TRENDKEY='puppyTrackerTrendsV2';
+
+const builtins=[
+{id:'pee',name:'Pee',icon:'💧',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'poop',name:'Poop',icon:'💩',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'potty-nothing',name:'Potty - Nothing',icon:'✕',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'sleep',name:'Sleep',icon:'💤',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'crate',name:'Crate',icon:'🏠',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'whining',name:'Whining',icon:'🔊',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
+{id:'meal',name:'Meal',icon:'🍽️',kind:'quantity',notesRequired:true,quantityEnabled:true,quantityLabel:'Amount'}
+];
+
+const defaultTrends=[
+{id:'builtin-potty-day-night',name:'Day vs night pee interval',measure:'interval',categoryId:'pee',compare:'daynight'},
+{id:'builtin-sleep-day-night',name:'Day vs night sleep',measure:'duration',categoryId:'sleep',compare:'daynight'},
+{id:'builtin-wake-pee',name:'Average pee after waking',measure:'after',fromCategoryId:'sleep',toCategoryId:'pee',relationEnd:'end'},
+{id:'builtin-meal-pee',name:'Average pee after meal',measure:'after',fromCategoryId:'meal',toCategoryId:'pee',relationEnd:'time'}
+];
+
+let events=JSON.parse(localStorage.getItem(KEY)||'[]');
+let cats=JSON.parse(localStorage.getItem(CATKEY)||'null')||builtins.map(x=>({...x}));
+let settings=JSON.parse(localStorage.getItem(SETKEY)||'{"dayStart":"07:00","nightStart":"22:00"}');
+let trends=JSON.parse(localStorage.getItem(TRENDKEY)||'null')||defaultTrends.map(x=>({...x}));
+let activeRange=3;
+
+const $=id=>document.getElementById(id);
+const save=()=>{localStorage.setItem(KEY,JSON.stringify(events));localStorage.setItem(CATKEY,JSON.stringify(cats));localStorage.setItem(SETKEY,JSON.stringify(settings));localStorage.setItem(TRENDKEY,JSON.stringify(trends));};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const catById=id=>cats.find(c=>c.id===id);
+const iconFor=id=>catById(id)?.icon||'🐾';
+const nameFor=id=>catById(id)?.name||'Unknown';
+const fmtTime=d=>new Date(d).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+const fmtDate=d=>new Date(d).toLocaleDateString([],{month:'short',day:'numeric'});
+function dur(ms){
+if(!isFinite(ms)||ms<0)return 'No data';
+if(ms<60000)return Math.round(ms/1000)+' sec';
+let m=Math.round(ms/60000); if(m<60)return m+' min';
+let h=Math.floor(m/60),r=m%60; return r?h+' hr '+r+' min':h+' hr';
+}
+function localDateTime(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+function localDateTimeFromISO(iso){if(!iso)return '';let d=new Date(iso);if(isNaN(d))return '';d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+function eventTime(e){return e.kind==='timed'?e.start:e.time;}
+function eventEnd(e){return e.kind==='timed'?e.end:null;}
+function isDayTime(d){
+let hm=new Date(d).toTimeString().slice(0,5);
+return hm>=settings.dayStart && hm<settings.nightStart;
+}
+function migrate(){
+let changed=false;
+events=events.map(e=>{
+if(e.categoryId)return e;
+let c=cats.find(x=>x.name===e.name)||builtins.find(x=>x.name===e.name);
+if(c){e.categoryId=c.id;changed=true;}
+if(e.kind==='timed'&&!('end'in e)){e.end=null;changed=true;}
+return e;
+});
+if(changed)save();
+}
+migrate();
+
+function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.add('show');}
+$('closeModal').onclick=()=>$('modal').classList.remove('show');
+
+function renderQuick(){
+$('quickGrid').innerHTML=cats.map(c=>{
+let running=c.kind==='timed'&&events.some(e=>e.categoryId===c.id&&e.kind==='timed'&&!e.end);
+return `<button class="eventbtn ${running?'running':''}" onclick="logCategory('${esc(c.id)}')"><span>${c.icon}</span>${esc(c.name)}</button>`;
+}).join('');
+}
+
+function logCategory(id){
+let c=catById(id);if(!c)return;
+if(c.kind==='timed'){
+let running=events.find(e=>e.categoryId===id&&e.kind==='timed'&&!e.end);
+if(running){running.end=new Date().toISOString();save();renderAll();return;}
+events.push({id:crypto.randomUUID(),categoryId:id,kind:'timed',start:new Date().toISOString(),end:null,qty:null,notes:''});
+save();renderAll();return;
+}
+let fields=`<div class="formrow"><label>Time</label><input id="evTime" type="datetime-local" value="${localDateTime()}"></div>`;
+if(c.quantityEnabled||c.kind==='quantity')fields+=`<div class="formrow"><label>${esc(c.quantityLabel||'Amount')}</label><input id="evQty" type="number" step="any" placeholder="Optional"></div>`;
+fields+=`<div class="formrow"><label>Notes${c.notesRequired?'':' (optional)'}</label><textarea id="evNotes" placeholder="What happened?"></textarea></div><button class="primary" onclick="saveInstant('${esc(id)}')">Save</button>`;
+openModal('Log '+c.name,fields);
+}
+window.saveInstant=id=>{
+let c=catById(id);if(!c)return;
+let t=new Date($('evTime').value);if(isNaN(t)){alert('Please enter a valid time.');return;}
+let notes=$('evNotes').value;
+if(c.notesRequired&&!notes.trim()){alert('Please add a note for this category.');return;}
+events.push({id:crypto.randomUUID(),categoryId:id,kind:c.kind,time:t.toISOString(),qty:$('evQty')?Number($('evQty').value)||null:null,notes});
+save();$('modal').classList.remove('show');renderAll();
+};
+
+function todayEvents(){let a=new Date();return events.filter(e=>new Date(eventTime(e)).toDateString()===a.toDateString()).sort((a,b)=>new Date(eventTime(b))-new Date(eventTime(a)));}
+
+function renderToday(){
+let a=todayEvents();
+$('peeCount').textContent=events.filter(e=>e.categoryId==='pee'&&new Date(eventTime(e)).toDateString()===new Date().toDateString()).length;
+$('poopCount').textContent=events.filter(e=>e.categoryId==='poop'&&new Date(eventTime(e)).toDateString()===new Date().toDateString()).length;
+$('sleepTotal').textContent=dur(a.filter(e=>e.categoryId==='sleep'&&e.kind==='timed'&&e.end).reduce((s,e)=>s+(new Date(e.end)-new Date(e.start)),0)||0);
+let running=events.filter(e=>e.kind==='timed'&&!e.end);
+$('runningCard').innerHTML=running.length?`<div class="card"><h3>Currently active</h3>${running.map(e=>`<div class="row"><span>${iconFor(e.categoryId)}</span><div class="grow"><b>${esc(nameFor(e.categoryId))}</b><div class="muted">Started ${fmtTime(e.start)} · ${dur(Date.now()-new Date(e.start))}</div></div><button class="primary" onclick="stopEvent('${e.id}')">STOP</button></div>`).join('')}</div>`:'';
+$('timeline').innerHTML=a.length?a.map(e=>{
+let timeText=e.kind==='timed'?fmtTime(e.start)+(e.end?' · '+dur(new Date(e.end)-new Date(e.start)):' · Active'):fmtTime(e.time);
+return `<div class="row"><span>${iconFor(e.categoryId)}</span><div class="grow"><b>${esc(nameFor(e.categoryId))}</b><div class="muted">${timeText}${e.qty!=null?' · '+e.qty:''}</div>${e.notes?`<div class="muted">${esc(e.notes)}</div>`:''}</div><button class="smallbtn" onclick="editEvent('${e.id}')">Edit</button></div>`;
+}).join(''):'<div class="empty">No events yet.</div>';
+}
+window.stopEvent=id=>{let e=events.find(x=>x.id===id);if(e&&e.kind==='timed'){e.end=new Date().toISOString();save();renderAll();}};
+
+window.editEvent=id=>{
+let e=events.find(x=>x.id===id);if(!e)return;let c=catById(e.categoryId);let html='';
+if(e.kind!=='timed'){
+html+=`<div class="formrow"><label>Time</label><input id="editTime" type="datetime-local" value="${localDateTimeFromISO(e.time)}"></div>`;
+if(c?.quantityEnabled||e.kind==='quantity')html+=`<div class="formrow"><label>${esc(c?.quantityLabel||'Amount')}</label><input id="editQty" type="number" step="any" value="${e.qty??''}"></div>`;
+html+=`<div class="formrow"><label>Notes${c?.notesRequired?'':' (optional)'}</label><textarea id="editNotes">${esc(e.notes)}</textarea></div><button class="primary" onclick="updateEvent('${id}')">Save changes</button> <button class="secondary" onclick="deleteEvent('${id}')">Delete</button>`;
+}else{
+html+=`<div class="formrow"><label>Start time</label><input id="editStart" type="datetime-local" value="${localDateTimeFromISO(e.start)}"></div><div class="formrow"><label>End time</label><input id="editEnd" type="datetime-local" value="${e.end?localDateTimeFromISO(e.end):''}"><div class="muted">Leave blank if still active.</div></div><div class="formrow"><label>Notes${c?.notesRequired?'':' (optional)'}</label><textarea id="editNotes">${esc(e.notes)}</textarea></div><button class="primary" onclick="updateEvent('${id}')">Save changes</button> <button class="secondary" onclick="deleteEvent('${id}')">Delete</button>`;
+}
+openModal('Edit '+(c?.name||'event'),html);
+};
+window.updateEvent=id=>{
+let e=events.find(x=>x.id===id),c=catById(e.categoryId);if(!e)return;
+let notes=$('editNotes').value;if(c?.notesRequired&&!notes.trim()){alert('Please add a note for this category.');return;}
+if(e.kind!=='timed'){let t=new Date($('editTime').value);if(isNaN(t)){alert('Please enter a valid time.');return;}e.time=t.toISOString();if($('editQty'))e.qty=Number($('editQty').value)||null;e.notes=notes;}
+else{let s=new Date($('editStart').value);if(isNaN(s)){alert('Please enter a valid start time.');return;}let ev=$('editEnd').value;if(ev){let end=new Date(ev);if(isNaN(end)||end<s){alert('End time cannot be before start time.');return;}e.end=end.toISOString();}else e.end=null;e.start=s.toISOString();e.notes=notes;}
+save();$('modal').classList.remove('show');renderAll();
+};
+window.deleteEvent=id=>{if(!confirm('Delete this event?'))return;events=events.filter(e=>e.id!==id);save();$('modal').classList.remove('show');renderAll();};
+
+function completeEvents(){return events.filter(e=>e.kind!=='timed'||e.end);}
+function getStart(e){return new Date(eventTime(e));}
+function getReferenceEnd(e){return e.kind==='timed'&&e.end?new Date(e.end):getStart(e);}
+function eventsForCategory(id){return completeEvents().filter(e=>e.categoryId===id).sort((a,b)=>getStart(a)-getStart(b));}
+function inRange(e){
+let cutoff=new Date();cutoff.setDate(cutoff.getDate()-activeRange+1);cutoff.setHours(0,0,0,0);
+return getStart(e)>=cutoff;
+}
+function average(vals){return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;}
+function avgInterval(id, filterFn){
+let a=eventsForCategory(id).filter(inRange).filter(filterFn||(()=>true));let vals=[];
+for(let i=1;i<a.length;i++)vals.push(getStart(a[i])-getStart(a[i-1]));
+return average(vals);
+}
+function avgDuration(id,filterFn){
+let a=eventsForCategory(id).filter(inRange).filter(filterFn||(()=>true));
+return average(a.filter(e=>e.kind==='timed'&&e.end).map(e=>new Date(e.end)-new Date(e.start)));
+}
+function relationAverage(fromId,toId,mode,windowHours,filter){
+let from=eventsForCategory(fromId).filter(inRange),to=eventsForCategory(toId).filter(inRange),vals=[];
+for(let b of to){
+let bTime=getStart(b);
+let prior=from.filter(a=>{
+let ref=getReferenceEnd(a);
+return ref<=bTime&&bTime-ref<=windowHours*3600000;
+}).sort((a,c)=>getReferenceEnd(c)-getReferenceEnd(a))[0];
+if(prior){let v=bTime-getReferenceEnd(prior);if(!filter||filter(prior,b))vals.push(v);}
+}
+return average(vals);
+}
+function relationLabel(t){return t==='after'?'After':'Before';}
+function periodFilter(period){
+if(period==='day')return e=>isDayTime(getStart(e));
+if(period==='night')return e=>!isDayTime(getStart(e));
+return ()=>true;
+}
+function trendResult(t){
+if(t.measure==='interval'){
+if(t.compare==='daynight'){
+let day=avgInterval(t.categoryId,e=>isDayTime(getStart(e))),night=avgInterval(t.categoryId,e=>!isDayTime(getStart(e)));
+return {html:`<div class="row"><span class="grow">Day</span><b>${day==null?'No data':dur(day)}</b></div><div class="row"><span class="grow">Night</span><b>${night==null?'No data':dur(night)}</b></div>`};
+}
+let v=avgInterval(t.categoryId,periodFilter(t.period));return {html:`<div class="trendvalue">${v==null?'No data':dur(v)}</div>`};
+}
+if(t.measure==='duration'){
+if(t.compare==='daynight'){
+let day=avgDuration(t.categoryId,e=>isDayTime(getStart(e))),night=avgDuration(t.categoryId,e=>!isDayTime(getStart(e)));
+return {html:`<div class="row"><span class="grow">Day</span><b>${day==null?'No data':dur(day)}</b></div><div class="row"><span class="grow">Night</span><b>${night==null?'No data':dur(night)}</b></div>`};
+}
+let v=avgDuration(t.categoryId,periodFilter(t.period));return {html:`<div class="trendvalue">${v==null?'No data':dur(v)}</div>`};
+}
+if(t.measure==='count'){
+let n=eventsForCategory(t.categoryId).filter(inRange).filter(periodFilter(t.period)).length;
+return {html:`<div class="trendvalue">${n}</div>`};
+}
+if(t.measure==='totalduration'){
+let vals=eventsForCategory(t.categoryId).filter(inRange).filter(periodFilter(t.period)).filter(e=>e.kind==='timed'&&e.end).map(e=>new Date(e.end)-new Date(e.start));
+return {html:`<div class="trendvalue">${vals.length?dur(vals.reduce((a,b)=>a+b,0)):'No data'}</div>`};
+}
+if(t.measure==='after'||t.measure==='before'){
+let v=relationAverage(t.fromCategoryId,t.toCategoryId,t.measure,t.windowHours||24);
+if(t.measure==='before'){v=relationAverage(t.toCategoryId,t.fromCategoryId,'after',t.windowHours||24);}
+return {html:`<div class="trendvalue">${v==null?'No data':dur(v)}</div>`};
+}
+return {html:'No data'};
+}
+function trendDescription(t){
+if(t.measure==='interval')return `${nameFor(t.categoryId)} · average interval${t.compare==='daynight'?' · day vs night':t.period?' · '+t.period:''}`;
+if(t.measure==='duration')return `${nameFor(t.categoryId)} · average duration${t.compare==='daynight'?' · day vs night':t.period?' · '+t.period:''}`;
+if(t.measure==='count')return `${nameFor(t.categoryId)} · count${t.period?' · '+t.period:''}`;
+if(t.measure==='totalduration')return `${nameFor(t.categoryId)} · total duration${t.period?' · '+t.period:''}`;
+return `${nameFor(t.fromCategoryId)} → ${nameFor(t.toCategoryId)} · average time`;
+}
+function renderTrends(){
+$('savedTrends').innerHTML=trends.length?trends.map(t=>{
+let r=trendResult(t);
+return `<div class="card trendcard"><h3>${esc(t.name)}</h3><div class="trendmeta">${esc(trendDescription(t))}</div>${r.html}<div class="actions"><button class="secondary mini" onclick="editTrend('${t.id}')">Edit</button><button class="secondary mini" onclick="deleteTrend('${t.id}')">Delete</button></div></div>`;
+}).join(''):'<div class="empty">No saved trends yet.</div>';
+drawChart();
+}
+window.deleteTrend=id=>{if(!confirm('Delete this trend?'))return;trends=trends.filter(t=>t.id!==id);save();renderTrends();};
+window.editTrend=id=>openTrendEditor(trends.find(t=>t.id===id));
+function trendEditorHTML(t){
+let catOptions=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.icon+' '+c.name)}</option>`).join('');
+let measure=t?.measure||'interval';
+return `<div class="formrow"><label>Trend name</label><input id="trendName" value="${esc(t?.name||'My trend')}" placeholder="e.g. Play to pee"></div>
+<div class="formrow"><label>What do you want to measure?</label><select id="trendMeasure">
+<option value="interval" ${measure==='interval'?'selected':''}>Average time between events</option>
+<option value="duration" ${measure==='duration'?'selected':''}>Average duration</option>
+<option value="totalduration" ${measure==='totalduration'?'selected':''}>Total duration</option>
+<option value="count" ${measure==='count'?'selected':''}>Event count</option>
+<option value="after" ${measure==='after'?'selected':''}>Average time from one event to another</option>
+<option value="before" ${measure==='before'?'selected':''}>Average time from one event backward to another</option>
+</select></div>
+<div id="trendFields"></div>
+<div class="sectionnote">Results use the last ${activeRange} days selected on the Trends page. You can change the range without changing the saved trend.</div>
+<button class="primary" onclick="saveTrend('${esc(t?.id||'')}')">Save trend</button>`;
+}
+function fillTrendFields(t){
+let m=$('trendMeasure').value;
+let html='';
+let catOptions=cats.map(c=>`<option value="${esc(c.id)}">${esc(c.icon+' '+c.name)}</option>`).join('');
+if(m==='interval'||m==='duration'||m==='count'||m==='totalduration'){
+let selected=t?.categoryId||cats[0]?.id||'';
+html+=`<div class="formrow"><label>Category</label><select id="trendCategory">${catOptions}</select></div>`;
+if(m==='interval'||m==='duration')html+=`<div class="formrow"><label>Compare</label><select id="trendCompare"><option value="none">All times</option><option value="daynight">Day vs night</option></select></div>`;
+if(m==='count'||m==='totalduration')html+=`<div class="formrow"><label>Time period</label><select id="trendPeriod"><option value="all">Any time</option><option value="day">Day</option><option value="night">Night</option></select></div>`;
+} else {
+let a=t?.fromCategoryId||cats[0]?.id||'',b=t?.toCategoryId||cats[0]?.id||'';
+html+=`<div class="formrow"><label>Starting event</label><select id="trendFrom">${catOptions}</select></div><div class="formrow"><label>Ending event</label><select id="trendTo">${catOptions}</select></div><div class="formrow"><label>Maximum time to connect events</label><select id="trendWindow"><option value="1">1 hour</option><option value="2">2 hours</option><option value="4">4 hours</option><option value="8">8 hours</option><option value="12">12 hours</option><option value="24">24 hours</option><option value="48">48 hours</option></select></div>`;
+}
+$('trendFields').innerHTML=html;
+if($('trendCategory'))$('trendCategory').value=t?.categoryId||cats[0]?.id||'';
+if($('trendCompare'))$('trendCompare').value=t?.compare||'none';
+if($('trendPeriod'))$('trendPeriod').value=t?.period||'all';
+if($('trendFrom'))$('trendFrom').value=t?.fromCategoryId||cats[0]?.id||'';
+if($('trendTo'))$('trendTo').value=t?.toCategoryId||cats[0]?.id||'';
+if($('trendWindow'))$('trendWindow').value=t?.windowHours||24;
+}
+function openTrendEditor(t){
+openModal(t?'Edit trend':'Create trend',trendEditorHTML(t));
+fillTrendFields(t);
+$('trendMeasure').onchange=()=>fillTrendFields(t);
+}
+$('addTrendBtn').onclick=()=>openTrendEditor(null);
+window.saveTrend=id=>{
+let t=trends.find(x=>x.id===id);
+let obj=t||{id:crypto.randomUUID()};
+obj.name=$('trendName').value.trim()||'My trend';
+obj.measure=$('trendMeasure').value;
+if(['interval','duration','count','totalduration'].includes(obj.measure)){
+obj.categoryId=$('trendCategory').value;
+obj.compare=$('trendCompare')?.value||'none';
+obj.period=$('trendPeriod')?.value||'all';
+}else{
+obj.fromCategoryId=$('trendFrom').value;obj.toCategoryId=$('trendTo').value;obj.windowHours=Number($('trendWindow').value)||24;
+}
+if(!t)trends.push(obj);save();$('modal').classList.remove('show');renderTrends();
+};
+
+function drawChart(){
+let canvas=$('chart'),ctx=canvas.getContext('2d'),w=canvas.clientWidth*devicePixelRatio,h=230*devicePixelRatio;
+canvas.width=w;canvas.height=h;ctx.clearRect(0,0,w,h);ctx.font=`${12*devicePixelRatio}px -apple-system`;
+let now=new Date(),days=[];for(let i=activeRange-1;i>=0;i--){let d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-i);days.push(d);}
+let max=Math.max(1,...days.map(d=>['pee','poop'].reduce((n,id)=>n+events.filter(e=>e.categoryId===id&&new Date(eventTime(e)).toDateString()===d.toDateString()).length,0)));
+ctx.strokeStyle='#dfe5e2';ctx.fillStyle='#697674';ctx.lineWidth=1;
+for(let i=0;i<=max;i++){let y=h-25-(h-55)*i/max;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(w-10,y);ctx.stroke();ctx.fillText(i,8,y+4);}
+days.forEach((d,i)=>{let x=45+i*((w-60)/Math.max(1,days.length-1));let pee=events.filter(e=>e.categoryId==='pee'&&new Date(eventTime(e)).toDateString()===d.toDateString()).length;let poop=events.filter(e=>e.categoryId==='poop'&&new Date(eventTime(e)).toDateString()===d.toDateString()).length;ctx.fillStyle='#0f5b55';ctx.fillRect(x-9,h-25-(h-55)*pee/max,8,(h-55)*pee/max);ctx.fillStyle='#d98a27';ctx.fillRect(x+1,h-25-(h-55)*poop/max,8,(h-55)*poop/max);ctx.fillStyle='#697674';ctx.fillText(d.toLocaleDateString([],{month:'numeric',day:'numeric'}),x-12,h-8);});
+}
+$('rangePills').onclick=e=>{if(e.target.dataset.days){activeRange=Number(e.target.dataset.days);document.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===e.target));renderTrends();}};
+
+function renderHistory(){
+let q=$('search').value.toLowerCase(),a=[...events].sort((x,y)=>new Date(eventTime(y))-new Date(eventTime(x))).filter(e=>(nameFor(e.categoryId)+' '+e.notes).toLowerCase().includes(q));
+$('historyList').innerHTML=a.length?a.map(e=>{let detail=fmtDate(eventTime(e))+' · '+(e.kind==='timed'?fmtTime(e.start)+(e.end?' · '+dur(new Date(e.end)-new Date(e.start)):' · Active'):fmtTime(e.time));return `<div class="row"><span>${iconFor(e.categoryId)}</span><div class="grow"><b>${esc(nameFor(e.categoryId))}</b><div class="muted">${detail}${e.qty!=null?' · '+e.qty:''}</div>${e.notes?`<div class="muted">${esc(e.notes)}</div>`:''}</div><button class="smallbtn" onclick="editEvent('${e.id}')">Edit</button></div>`}).join(''):'<div class="empty">No matching events.</div>';
+}
+$('search').oninput=renderHistory;
+
+function renderSettings(){
+$('dayStart').value=settings.dayStart;$('nightStart').value=settings.nightStart;
+$('categoryList').innerHTML=cats.map(c=>`<div class="row"><span>${c.icon}</span><div class="grow"><b>${esc(c.name)}</b><div><span class="badge">${esc(c.kind)}</span></div></div><button class="secondary mini" onclick="editCategory('${esc(c.id)}')">Edit</button>${!builtins.some(b=>b.id===c.id)?`<button class="smallbtn" onclick="removeCat('${esc(c.id)}')">Delete</button>`:''}</div>`).join('');
+}
+function categoryEditorHTML(c){
+return `<div class="formrow"><label>Name</label><input id="catName" value="${esc(c?.name||'')}" placeholder="e.g. Play"></div>
+<div class="formrow"><label>Icon</label><input id="catIcon" value="${esc(c?.icon||'🐾')}"></div>
+<div class="formrow"><label>Type</label><select id="catKind"><option value="instant" ${c?.kind==='instant'?'selected':''}>One-time event</option><option value="timed" ${c?.kind==='timed'?'selected':''}>Timed event</option><option value="quantity" ${c?.kind==='quantity'?'selected':''}>Quantity event</option></select></div>
+<div class="formrow"><label>Quantity label</label><input id="catQtyLabel" value="${esc(c?.quantityLabel||'Amount')}" placeholder="e.g. cups, oz, treats"></div>
+<div class="checkrow"><input type="checkbox" id="catNotes" ${c?.notesRequired?'checked':''}><label for="catNotes">Require notes when logging this category</label></div>
+<button class="primary" onclick="saveCategory('${esc(c?.id||'')}')">Save category</button>${c?` <button class="secondary" onclick="deleteCategoryFromEditor('${esc(c.id)}')">Delete</button>`:''}`;
+}
+function openCategoryEditor(c){openModal(c?'Edit category':'New category',categoryEditorHTML(c));}
+window.editCategory=id=>openCategoryEditor(catById(id));
+$('addCategoryBtn').onclick=()=>openCategoryEditor(null);
+window.saveCategory=id=>{
+let name=$('catName').value.trim();if(!name){alert('Please enter a category name.');return;}
+let existing=id?catById(id):null;
+if(existing){existing.name=name;existing.icon=$('catIcon').value||'🐾';existing.kind=$('catKind').value;existing.quantityEnabled=existing.kind==='quantity';existing.quantityLabel=$('catQtyLabel').value||'Amount';existing.notesRequired=$('catNotes').checked;}
+else cats.push({id:crypto.randomUUID(),name,icon:$('catIcon').value||'🐾',kind:$('catKind').value,quantityEnabled:$('catKind').value==='quantity',quantityLabel:$('catQtyLabel').value||'Amount',notesRequired:$('catNotes').checked});
+save();$('modal').classList.remove('show');renderAll();
+};
+window.deleteCategoryFromEditor=id=>{if(confirm('Delete this category? Existing events will remain in your data but will be shown as Unknown until you restore the category.')){cats=cats.filter(c=>c.id!==id);save();$('modal').classList.remove('show');renderAll();}};
+window.removeCat=id=>{if(confirm('Delete this category?')){cats=cats.filter(c=>c.id!==id);save();renderAll();}};
+$('saveTimes').onclick=()=>{settings.dayStart=$('dayStart').value;settings.nightStart=$('nightStart').value;save();alert('Saved');};
+
+$('exportBtn').onclick=()=>{
+let rows=[['id','category_id','event','event_type','time','start','end','duration_seconds','quantity','notes','day_or_night']];
+for(let e of events){let d=new Date(eventTime(e)),hm=d.toTimeString().slice(0,5),night=hm>=settings.nightStart||hm<settings.dayStart?'Night':'Day';let start='',end='',duration='',time=e.kind==='timed'?'':e.time;if(e.kind==='timed'){start=e.start;end=e.end||'';duration=e.end?((new Date(e.end)-new Date(e.start))/1000):'';}rows.push([e.id,e.categoryId,nameFor(e.categoryId),e.kind,time,start,end,duration,e.qty??'',e.notes,night]);}
+let csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\\n');
+let blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='puppy_tracker.csv';a.click();URL.revokeObjectURL(url);
+};
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active');renderAll();});
+
+function renderAll(){
+$('date').textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
+renderQuick();renderToday();renderTrends();renderHistory();renderSettings();
+}
+renderAll();
+</script>
+</body>
+</html>
