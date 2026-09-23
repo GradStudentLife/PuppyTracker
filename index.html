@@ -1,2196 +1,4032 @@
 ```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5b55">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Puppy Tracker</title>
+
+<style>
+:root{
+--ink:#24302f;
+--muted:#697674;
+--bg:#f7f7f4;
+--card:#fff;
+--accent:#0f5b55;
+--line:#dfe5e2;
+--danger:#b33b3b
+}
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+background:var(--bg);
+color:var(--ink);
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}
+
+header{
+padding:18px 18px 10px;
+position:sticky;
+top:0;
+background:rgba(247,247,244,.95);
+backdrop-filter:blur(10px);
+z-index:5
+}
+
+h1{margin:0;font-size:28px}
+.date{color:var(--muted);margin-top:3px}
+
+nav{
+display:flex;
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:#fff;
+border-top:1px solid var(--line);
+padding:7px 4px calc(7px + env(safe-area-inset-bottom));
+z-index:10
+}
+
+nav button{
+flex:1;
+border:0;
+background:none;
+color:var(--muted);
+font-size:12px;
+padding:7px 2px
+}
+
+nav button.active{
+color:var(--accent);
+font-weight:700
+}
+
+main{
+padding:8px 16px 95px;
+max-width:720px;
+margin:auto
+}
+
+.view{display:none}
+.view.active{display:block}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px
+}
+
+.eventbtn{
+border:1px solid var(--line);
+background:var(--card);
+border-radius:18px;
+padding:15px 6px;
+min-height:88px;
+font-weight:700;
+color:var(--ink);
+box-shadow:0 2px 8px #00000008
+}
+
+.eventbtn span{
+display:block;
+font-size:27px;
+margin-bottom:5px
+}
+
+.eventbtn.running{
+background:#e7f3f0;
+border-color:var(--accent);
+color:var(--accent)
+}
+
+.card{
+background:var(--card);
+border:1px solid var(--line);
+border-radius:18px;
+padding:15px;
+margin:12px 0
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px
+}
+
+.stat{text-align:center}
+.stat b{display:block;font-size:21px}
+.stat small{color:var(--muted)}
+
+h2{
+font-size:18px;
+margin:20px 0 9px
+}
+
+h3{margin:0 0 8px}
+
+.row{
+display:flex;
+align-items:center;
+gap:10px;
+padding:11px 0;
+border-bottom:1px solid var(--line)
+}
+
+.row:last-child{border-bottom:0}
+
+.grow{flex:1}
+.muted{color:var(--muted);font-size:13px}
+
+button{
+font:inherit;
+cursor:pointer
+}
+
+.primary{
+background:var(--accent);
+color:#fff;
+border:0;
+border-radius:13px;
+padding:11px 15px;
+font-weight:700
+}
+
+.secondary{
+background:#eef2f0;
+border:0;
+border-radius:12px;
+padding:9px 12px
+}
+
+.danger{color:var(--danger)}
+
+input,textarea,select{
+width:100%;
+border:1px solid var(--line);
+border-radius:11px;
+padding:11px;
+background:#fff;
+font:inherit
+}
+
+textarea{min-height:80px}
+
+.formrow{margin:12px 0}
+
+.formrow label{
+display:block;
+font-size:13px;
+font-weight:700;
+margin-bottom:5px
+}
+
+.two{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px
+}
+
+.modal{
+position:fixed;
+inset:0;
+background:#0006;
+display:none;
+align-items:flex-end;
+z-index:20
+}
+
+.modal.show{display:flex}
+
+.sheet{
+background:var(--bg);
+width:100%;
+max-height:92vh;
+overflow:auto;
+border-radius:22px 22px 0 0;
+padding:18px 16px calc(25px + env(safe-area-inset-bottom))
+}
+
+.sheethead{
+display:flex;
+justify-content:space-between;
+align-items:center
+}
+
+.badge{
+display:inline-block;
+background:#edf3f1;
+color:var(--accent);
+border-radius:999px;
+padding:4px 8px;
+font-size:12px
+}
+
+.empty{
+text-align:center;
+color:var(--muted);
+padding:25px 5px
+}
+
+canvas{
+width:100%;
+height:230px
+}
+
+.pillrow{
+display:flex;
+gap:7px;
+overflow:auto
+}
+
+.pill{
+white-space:nowrap;
+border:1px solid var(--line);
+background:#fff;
+border-radius:999px;
+padding:8px 12px
+}
+
+.pill.active{
+background:var(--accent);
+color:#fff
+}
+
+.smallbtn{
+border:0;
+background:none;
+color:var(--danger);
+padding:5px
+}
+
+.mini{
+font-size:12px;
+padding:7px 10px
+}
+
+.checkrow{
+display:flex;
+align-items:center;
+gap:8px;
+margin:7px 0
+}
+
+.checkrow input{
+width:auto
+}
+
+.sectionnote{
+background:#edf3f1;
+border-radius:12px;
+padding:10px;
+font-size:13px;
+color:var(--muted);
+margin:10px 0
+}
+
+.trendcard h3{margin-bottom:4px}
+
+.trendvalue{
+font-size:22px;
+font-weight:700;
+margin-top:8px
+}
+
+.trendmeta{
+font-size:12px;
+color:var(--muted)
+}
+
+.actions{
+display:flex;
+gap:7px;
+flex-wrap:wrap;
+margin-top:10px
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Puppy Tracker</h1>
+<div class="date" id="date"></div>
+</header>
+
+<main>
+
+<section id="today" class="view active">
+
+<div class="stats card">
+<div class="stat">
+<b id="peeCount">0</b>
+<small>Pee</small>
+</div>
+
+<div class="stat">
+<b id="poopCount">0</b>
+<small>Poop</small>
+</div>
+
+<div class="stat">
+<b id="sleepTotal">0m</b>
+<small>Sleep</small>
+</div>
+</div>
+
+<h2>Log an event</h2>
+
+<div class="grid" id="quickGrid"></div>
+
+<div id="runningCard"></div>
+
+<h2>Today</h2>
+
+<div class="card" id="timeline"></div>
+
+</section>
+
+
+<section id="trends" class="view">
+
+<div class="card">
+
+<div class="pillrow" id="rangePills">
+
+<button class="pill active" data-days="3">3 days</button>
+<button class="pill" data-days="7">7 days</button>
+<button class="pill" data-days="14">14 days</button>
+<button class="pill" data-days="30">30 days</button>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h3>My trends</h3>
+
+<div id="savedTrends"></div>
+
+<button class="primary" id="addTrendBtn">
+Create trend
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h3>Potty events</h3>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+</section>
+
+
+<section id="history" class="view">
+
+<div class="card">
+<input id="search" placeholder="Search events or notes">
+</div>
+
+<div class="card" id="historyList"></div>
+
+</section>
+
+
+<section id="settings" class="view">
+
+<div class="card">
+
+<h3>Categories</h3>
+
+<div class="sectionnote">
+Every category can be edited. Renaming a category does not erase its historical events.
+</div>
+
+<div id="categoryList"></div>
+
+<button class="primary" id="addCategoryBtn">
+Add category
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h3>Day / night</h3>
+
+<div class="two">
+
+<div class="formrow">
+<label>Day starts</label>
+<input type="time" id="dayStart" value="07:00">
+</div>
+
+<div class="formrow">
+<label>Night starts</label>
+<input type="time" id="nightStart" value="22:00">
+</div>
+
+</div>
+
+<button class="secondary" id="saveTimes">
+Save times
+</button>
+
+</div>
+
+
+<div class="card">
+
+<h3>Data</h3>
+
+<p class="muted">
+Events, categories, and saved trends stay on this device.
+Export a CSV backup whenever you want.
+The app also keeps the original browser data backup created during the one-time migration.
+</p>
+
+<button class="primary" id="exportBtn">
+Export CSV
+</button>
+
+<button class="secondary" id="backupBtn">
+Download raw backup
+</button>
+
+</div>
+
+</section>
+
+</main>
+
+
+<nav>
+
+<button data-view="today" class="active">
+Today
+</button>
+
+<button data-view="trends">
+Trends
+</button>
+
+<button data-view="history">
+History
+</button>
+
+<button data-view="settings">
+Settings
+</button>
+
+</nav>
+
+
+<div class="modal" id="modal">
+
+<div class="sheet">
+
+<div class="sheethead">
+
+<h2 id="modalTitle">
+Add event
+</h2>
+
+<button class="secondary" id="closeModal">
+Close
+</button>
+
+</div>
+
+<div id="modalBody"></div>
+
+</div>
+
+</div>
+
+
 <script>
+
+/* =========================================================
+   STORAGE
+   ========================================================= */
+
 const KEY='puppyTrackerEventsV2';
 const CATKEY='puppyTrackerCatsV2';
 const SETKEY='puppyTrackerSettingsV2';
 const TRENDKEY='puppyTrackerTrendsV2';
 const BACKUPKEY='puppyTrackerOriginalBackupV1';
-const MIGRATIONKEY='puppyTrackerMigrationCompleteV2';
-
-const OLD_KEYS={
-  events:['puppyTrackerEvents','puppyEvents','events','puppy_tracker_events'],
-  cats:['puppyTrackerCategories','puppyTrackerCats','categories','puppy_categories'],
-  settings:['puppyTrackerSettings','settings','puppy_settings'],
-  trends:['puppyTrackerTrends','trends']
-};
-
-function readJSONKey(key){
-  try{
-    const raw=localStorage.getItem(key);
-    return raw?JSON.parse(raw):null;
-  }catch(e){return null;}
-}
-
-function findOldData(keys){
-  for(const k of keys){
-    const v=readJSONKey(k);
-    if(v!==null)return {key:k,value:v};
-  }
-  return null;
-}
-
-function looksLikeEventArray(v){
-  return Array.isArray(v)&&v.some(e=>e&&(
-    'time' in e || 'start' in e || 'timestamp' in e ||
-    'name' in e || 'category' in e || 'categoryId' in e
-  ));
-}
-
-function normalizeOldEvent(e,index){
-  const categoryName=e.categoryName||e.category||e.name||e.type||e.eventName||'Unknown';
-  let categoryId=e.categoryId||e.category_id||null;
-  let kind=e.kind||e.type||e.eventType||null;
-
-  if(kind==='one-time')kind='instant';
-  if(kind==='one_time')kind='instant';
-  if(kind==='duration')kind='timed';
-
-  const start=e.start||e.startTime||null;
-  const end=e.end||e.endTime||null;
-  const time=e.time||e.timestamp||e.dateTime||e.datetime||start||new Date().toISOString();
-
-  if(!kind){
-    kind=(start||end)?'timed':'instant';
-  }
-
-  return {
-    id:e.id||crypto.randomUUID(),
-    categoryId:categoryId,
-    legacyCategoryName:categoryName,
-    kind,
-    time:new Date(time).toString()!=='Invalid Date'?new Date(time).toISOString():new Date().toISOString(),
-    start:start&&new Date(start).toString()!=='Invalid Date'?new Date(start).toISOString():null,
-    end:end&&new Date(end).toString()!=='Invalid Date'?new Date(end).toISOString():null,
-    qty:e.qty??e.quantity??e.amount??null,
-    notes:e.notes??e.note??''
-  };
-}
 
 /*
-IMPORTANT MIGRATION FIX
+   IMPORTANT:
 
-The old version of the app was checking the old storage keys every time
-the app loaded. That meant:
+   This key prevents the old migration from happening again.
 
-1. Old data was imported.
-2. You deleted something.
-3. The app loaded again.
-4. It saw the old data still sitting in the old storage key.
-5. It imported it again.
-
-This flag makes migration a ONE-TIME operation.
-
-The original old storage is intentionally NOT deleted because we want
-the backup/recovery system to remain available.
+   Once migration is complete, deleting data will NOT cause
+   old data to come back.
 */
-function migrateOldStorage(){
+const MIGRATIONKEY='puppyTrackerMigrationCompletedV3';
 
-  const migrationComplete=localStorage.getItem(MIGRATIONKEY)==='true';
 
-  /*
-  If migration has already happened, NEVER look at the old storage again.
-  This is what makes deleted historical events stay deleted.
-  */
-  if(migrationComplete)return;
+const OLD_KEYS={
+events:[
+'puppyTrackerEvents',
+'puppyEvents',
+'events',
+'puppy_tracker_events'
+],
 
-  const currentEvents=readJSONKey(KEY);
-  const currentCats=readJSONKey(CATKEY);
-  const currentSettings=readJSONKey(SETKEY);
-  const currentTrends=readJSONKey(TRENDKEY);
+cats:[
+'puppyTrackerCategories',
+'puppyTrackerCats',
+'categories',
+'puppy_categories'
+],
 
-  /*
-  First make one permanent backup of whatever old data exists.
-  This backup is independent from the live app data.
-  */
-  if(!localStorage.getItem(BACKUPKEY)){
-    const backup={};
-    let found=false;
+settings:[
+'puppyTrackerSettings',
+'settings',
+'puppy_settings'
+],
 
-    for(const group of Object.keys(OLD_KEYS)){
-      const hit=findOldData(OLD_KEYS[group]);
+trends:[
+'puppyTrackerTrends',
+'trends'
+]
+};
 
-      if(hit){
-        backup[group]={
-          key:hit.key,
-          value:hit.value
-        };
-        found=true;
-      }
-    }
 
-    if(found){
-      localStorage.setItem(
-        BACKUPKEY,
-        JSON.stringify({
-          created:new Date().toISOString(),
-          data:backup
-        })
-      );
-    }
-  }
+/* =========================================================
+   SAFE STORAGE FUNCTIONS
+   ========================================================= */
 
-  /*
-  EVENTS
+function readJSONKey(key){
 
-  Only import old events if the new V2 event storage does not already
-  contain data.
-  */
-  if(currentEvents===null){
-    const hit=findOldData(OLD_KEYS.events);
+try{
 
-    if(hit){
-      let source=hit.value;
+const raw=localStorage.getItem(key);
 
-      if(source&&Array.isArray(source.events)){
-        source=source.events;
-      }
+if(raw===null)return null;
 
-      if(looksLikeEventArray(source)){
-        localStorage.setItem(
-          KEY,
-          JSON.stringify(source.map(normalizeOldEvent))
-        );
-      }else{
-        localStorage.setItem(KEY,'[]');
-      }
-    }else{
-      localStorage.setItem(KEY,'[]');
-    }
-  }
+return JSON.parse(raw);
 
-  /*
-  CATEGORIES
-  */
-  if(currentCats===null){
-    const hit=findOldData(OLD_KEYS.cats);
+}catch(e){
 
-    if(hit){
-      let source=hit.value;
+console.warn('Could not read localStorage key:',key,e);
 
-      if(source&&Array.isArray(source.categories)){
-        source=source.categories;
-      }
+return null;
 
-      if(Array.isArray(source)&&source.length){
-        const converted=source.map((c,i)=>({
-          id:c.id||c.categoryId||crypto.randomUUID(),
-          name:c.name||c.label||c.title||('Category '+(i+1)),
-          icon:c.icon||c.emoji||'🐾',
-          kind:c.kind||c.type||'instant',
-          notesRequired:c.notesRequired??c.requireNotes??true,
-          quantityEnabled:c.quantityEnabled??c.hasQuantity??(c.kind==='quantity'),
-          quantityLabel:c.quantityLabel||c.unit||'Amount'
-        }));
-
-        localStorage.setItem(
-          CATKEY,
-          JSON.stringify(converted)
-        );
-      }
-    }
-  }
-
-  /*
-  SETTINGS
-  */
-  if(currentSettings===null){
-    const hit=findOldData(OLD_KEYS.settings);
-
-    if(hit){
-      localStorage.setItem(
-        SETKEY,
-        JSON.stringify(hit.value)
-      );
-    }
-  }
-
-  /*
-  TRENDS
-  */
-  if(currentTrends===null){
-    const hit=findOldData(OLD_KEYS.trends);
-
-    if(hit){
-      localStorage.setItem(
-        TRENDKEY,
-        JSON.stringify(hit.value)
-      );
-    }
-  }
-
-  /*
-  THIS IS THE IMPORTANT PART.
-
-  Once the old data has been checked/imported, migration is permanently
-  marked complete.
-
-  Deleting something from V2 later will NOT cause it to come back.
-  */
-  localStorage.setItem(MIGRATIONKEY,'true');
 }
 
+}
+
+
+function writeJSONKey(key,value){
+
+try{
+
+localStorage.setItem(key,JSON.stringify(value));
+
+return true;
+
+}catch(e){
+
+console.error('Could not save data:',e);
+
+alert('The app could not save this change. Your browser may be out of storage space.');
+
+return false;
+
+}
+
+}
+
+
+function findOldData(keys){
+
+for(const k of keys){
+
+const v=readJSONKey(k);
+
+if(v!==null){
+
+return {
+key:k,
+value:v
+};
+
+}
+
+}
+
+return null;
+
+}
+
+
+/* =========================================================
+   BUILT-IN CATEGORIES
+   ========================================================= */
+
+const builtins=[
+
+{
+id:'pee',
+name:'Pee',
+icon:'💧',
+kind:'instant',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'poop',
+name:'Poop',
+icon:'💩',
+kind:'instant',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'potty-nothing',
+name:'Potty - Nothing',
+icon:'✕',
+kind:'instant',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'sleep',
+name:'Sleep',
+icon:'💤',
+kind:'timed',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'crate',
+name:'Crate',
+icon:'🏠',
+kind:'timed',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'whining',
+name:'Whining',
+icon:'🔊',
+kind:'timed',
+notesRequired:true,
+quantityEnabled:false,
+quantityLabel:'Amount'
+},
+
+{
+id:'meal',
+name:'Meal',
+icon:'🍽️',
+kind:'quantity',
+notesRequired:true,
+quantityEnabled:true,
+quantityLabel:'Amount'
+}
+
+];
+
+
+const defaultTrends=[
+
+{
+id:'builtin-potty-day-night',
+name:'Day vs night pee interval',
+measure:'interval',
+categoryId:'pee',
+compare:'daynight'
+},
+
+{
+id:'builtin-sleep-day-night',
+name:'Day vs night sleep',
+measure:'duration',
+categoryId:'sleep',
+compare:'daynight'
+},
+
+{
+id:'builtin-wake-pee',
+name:'Average pee after waking',
+measure:'after',
+fromCategoryId:'sleep',
+toCategoryId:'pee',
+relationEnd:'end'
+},
+
+{
+id:'builtin-meal-pee',
+name:'Average pee after meal',
+measure:'after',
+fromCategoryId:'meal',
+toCategoryId:'pee',
+relationEnd:'time'
+}
+
+];
+
+
+/* =========================================================
+   OLD EVENT NORMALIZATION
+   ========================================================= */
+
+function looksLikeEventArray(v){
+
+return Array.isArray(v)&&v.some(e=>e&&(
+
+'time' in e ||
+'start' in e ||
+'timestamp' in e ||
+'name' in e ||
+'category' in e ||
+'categoryId' in e
+
+));
+
+}
+
+
+function normalizeOldEvent(e,index){
+
+const categoryName=
+e.categoryName||
+e.category||
+e.name||
+e.type||
+e.eventName||
+'Unknown';
+
+
+let categoryId=
+e.categoryId||
+e.category_id||
+null;
+
+
+let kind=
+e.kind||
+e.type||
+e.eventType||
+null;
+
+
+if(kind==='one-time')kind='instant';
+if(kind==='one_time')kind='instant';
+if(kind==='duration')kind='timed';
+
+
+const start=
+e.start||
+e.startTime||
+null;
+
+
+const end=
+e.end||
+e.endTime||
+null;
+
+
+const time=
+e.time||
+e.timestamp||
+e.dateTime||
+e.datetime||
+start||
+new Date().toISOString();
+
+
+if(!kind){
+
+kind=(start||end)?'timed':'instant';
+
+}
+
+
+function validDate(value){
+
+if(!value)return null;
+
+const d=new Date(value);
+
+return isNaN(d)?null:d.toISOString();
+
+}
+
+
+return {
+
+id:e.id||crypto.randomUUID(),
+
+categoryId,
+
+legacyCategoryName:categoryName,
+
+kind,
+
+time:validDate(time)||new Date().toISOString(),
+
+start:validDate(start),
+
+end:validDate(end),
+
+qty:e.qty??e.quantity??e.amount??null,
+
+notes:e.notes??e.note??''
+
+};
+
+}
+
+
+/* =========================================================
+   ONE-TIME MIGRATION
+   ========================================================= */
+
+function migrateOldStorage(){
+
+/*
+   THIS IS THE IMPORTANT FIX.
+
+   If migration has already completed, absolutely nothing
+   from the old storage keys is imported again.
+*/
+if(localStorage.getItem(MIGRATIONKEY)==='true'){
+
+return;
+
+}
+
+
+/*
+   Check whether the new storage already exists.
+
+   An empty array is VALID DATA.
+
+   This is important because [] must NOT be treated like
+   "there is no data".
+*/
+const currentEventsExists=
+localStorage.getItem(KEY)!==null;
+
+const currentCatsExists=
+localStorage.getItem(CATKEY)!==null;
+
+const currentSettingsExists=
+localStorage.getItem(SETKEY)!==null;
+
+const currentTrendsExists=
+localStorage.getItem(TRENDKEY)!==null;
+
+
+/*
+   Make one original backup before touching anything.
+*/
+if(!localStorage.getItem(BACKUPKEY)){
+
+const backup={};
+
+let found=false;
+
+
+for(const group of Object.keys(OLD_KEYS)){
+
+const hit=findOldData(OLD_KEYS[group]);
+
+if(hit){
+
+backup[group]={
+key:hit.key,
+value:hit.value
+};
+
+found=true;
+
+}
+
+}
+
+
+if(found){
+
+writeJSONKey(
+BACKUPKEY,
+{
+created:new Date().toISOString(),
+data:backup
+}
+);
+
+}
+
+}
+
+
+/*
+   ONLY migrate events if the new event key does not exist.
+*/
+if(!currentEventsExists){
+
+const hit=findOldData(OLD_KEYS.events);
+
+if(hit){
+
+let source=hit.value;
+
+if(source&&Array.isArray(source.events)){
+
+source=source.events;
+
+}
+
+if(looksLikeEventArray(source)){
+
+writeJSONKey(
+KEY,
+source.map(normalizeOldEvent)
+);
+
+}
+
+}else{
+
+/*
+   Establish an empty current dataset.
+
+   This prevents future migrations from resurrecting data.
+*/
+writeJSONKey(KEY,[]);
+
+}
+
+}
+
+
+/*
+   Categories
+*/
+if(!currentCatsExists){
+
+const hit=findOldData(OLD_KEYS.cats);
+
+if(hit){
+
+let source=hit.value;
+
+if(source&&Array.isArray(source.categories)){
+
+source=source.categories;
+
+}
+
+
+if(Array.isArray(source)&&source.length){
+
+const converted=source.map((c,i)=>({
+
+id:c.id||c.categoryId||crypto.randomUUID(),
+
+name:c.name||c.label||c.title||('Category '+(i+1)),
+
+icon:c.icon||c.emoji||'🐾',
+
+kind:c.kind||c.type||'instant',
+
+notesRequired:c.notesRequired??c.requireNotes??true,
+
+quantityEnabled:c.quantityEnabled??c.hasQuantity??(c.kind==='quantity'),
+
+quantityLabel:c.quantityLabel||c.unit||'Amount'
+
+}));
+
+writeJSONKey(CATKEY,converted);
+
+}else{
+
+writeJSONKey(CATKEY,builtins.map(x=>({...x})));
+
+}
+
+}else{
+
+writeJSONKey(CATKEY,builtins.map(x=>({...x})));
+
+}
+
+}
+
+
+/*
+   Settings
+*/
+if(!currentSettingsExists){
+
+const hit=findOldData(OLD_KEYS.settings);
+
+if(hit){
+
+writeJSONKey(SETKEY,hit.value);
+
+}else{
+
+writeJSONKey(
+SETKEY,
+{
+dayStart:'07:00',
+nightStart:'22:00'
+}
+);
+
+}
+
+}
+
+
+/*
+   Trends
+*/
+if(!currentTrendsExists){
+
+const hit=findOldData(OLD_KEYS.trends);
+
+if(hit){
+
+writeJSONKey(TRENDKEY,hit.value);
+
+}else{
+
+writeJSONKey(
+TRENDKEY,
+defaultTrends.map(x=>({...x}))
+);
+
+}
+
+}
+
+
+/*
+   Migration is now COMPLETE.
+
+   This is what prevents deleted data from returning.
+*/
+localStorage.setItem(MIGRATIONKEY,'true');
+
+}
+
+
+/*
+   Run migration exactly once.
+*/
 migrateOldStorage();
 
 
-const builtins=[
-{id:'pee',name:'Pee',icon:'💧',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'poop',name:'Poop',icon:'💩',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'potty-nothing',name:'Potty - Nothing',icon:'✕',kind:'instant',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'sleep',name:'Sleep',icon:'💤',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'crate',name:'Crate',icon:'🏠',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'whining',name:'Whining',icon:'🔊',kind:'timed',notesRequired:true,quantityEnabled:false,quantityLabel:'Amount'},
-{id:'meal',name:'Meal',icon:'🍽️',kind:'quantity',notesRequired:true,quantityEnabled:true,quantityLabel:'Amount'}
-];
+/* =========================================================
+   LOAD CURRENT DATA
+   ========================================================= */
 
-const defaultTrends=[
-{id:'builtin-potty-day-night',name:'Day vs night pee interval',measure:'interval',categoryId:'pee',compare:'daynight'},
-{id:'builtin-sleep-day-night',name:'Day vs night sleep',measure:'duration',categoryId:'sleep',compare:'daynight'},
-{id:'builtin-wake-pee',name:'Average pee after waking',measure:'after',fromCategoryId:'sleep',toCategoryId:'pee',relationEnd:'end'},
-{id:'builtin-meal-pee',name:'Average pee after meal',measure:'after',fromCategoryId:'meal',toCategoryId:'pee',relationEnd:'time'}
-];
+let events=readJSONKey(KEY);
 
-let events=readJSONKey(KEY)||[];
+if(!Array.isArray(events)){
 
-let cats=readJSONKey(CATKEY)||builtins.map(x=>({...x}));
+events=[];
 
-let settings=readJSONKey(SETKEY)||{
-  dayStart:'07:00',
-  nightStart:'22:00'
+writeJSONKey(KEY,events);
+
+}
+
+
+let cats=readJSONKey(CATKEY);
+
+if(!Array.isArray(cats)||cats.length===0){
+
+cats=builtins.map(x=>({...x}));
+
+writeJSONKey(CATKEY,cats);
+
+}
+
+
+let settings=readJSONKey(SETKEY);
+
+if(!settings||typeof settings!=='object'){
+
+settings={
+dayStart:'07:00',
+nightStart:'22:00'
 };
 
-let trends=readJSONKey(TRENDKEY)||defaultTrends.map(x=>({...x}));
+writeJSONKey(SETKEY,settings);
+
+}
+
+
+let trends=readJSONKey(TRENDKEY);
+
+if(!Array.isArray(trends)){
+
+trends=defaultTrends.map(x=>({...x}));
+
+writeJSONKey(TRENDKEY,trends);
+
+}
+
 
 let activeRange=3;
 
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
 const $=id=>document.getElementById(id);
 
-const save=()=>{
-  localStorage.setItem(KEY,JSON.stringify(events));
-  localStorage.setItem(CATKEY,JSON.stringify(cats));
-  localStorage.setItem(SETKEY,JSON.stringify(settings));
-  localStorage.setItem(TRENDKEY,JSON.stringify(trends));
-};
 
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
-  '&':'&amp;',
-  '<':'&lt;',
-  '>':'&gt;',
-  '"':'&quot;',
-  "'":'&#39;'
-}[c]));
+function save(){
 
-const catById=id=>cats.find(c=>c.id===id);
+writeJSONKey(KEY,events);
+writeJSONKey(CATKEY,cats);
+writeJSONKey(SETKEY,settings);
+writeJSONKey(TRENDKEY,trends);
 
-const iconFor=id=>catById(id)?.icon||'🐾';
+}
 
-const nameFor=id=>catById(id)?.name||'Unknown';
 
-const fmtTime=d=>new Date(d).toLocaleTimeString([],{
-  hour:'numeric',
-  minute:'2-digit'
-});
+const esc=s=>
+String(s??'').replace(
+/[&<>"']/g,
+c=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#39;'
+}[c])
+);
 
-const fmtDate=d=>new Date(d).toLocaleDateString([],{
-  month:'short',
-  day:'numeric'
-});
+
+const catById=id=>
+cats.find(c=>c.id===id);
+
+
+const iconFor=id=>
+catById(id)?.icon||'🐾';
+
+
+const nameFor=id=>
+catById(id)?.name||'Unknown';
+
+
+const fmtTime=d=>
+new Date(d).toLocaleTimeString(
+[],
+{
+hour:'numeric',
+minute:'2-digit'
+}
+);
+
+
+const fmtDate=d=>
+new Date(d).toLocaleDateString(
+[],
+{
+month:'short',
+day:'numeric'
+}
+);
+
 
 function dur(ms){
-  if(!isFinite(ms)||ms<0)return 'No data';
 
-  if(ms<60000){
-    return Math.round(ms/1000)+' sec';
-  }
+if(!isFinite(ms)||ms<0)return 'No data';
 
-  let m=Math.round(ms/60000);
+if(ms<60000)return Math.round(ms/1000)+' sec';
 
-  if(m<60){
-    return m+' min';
-  }
+let m=Math.round(ms/60000);
 
-  let h=Math.floor(m/60);
-  let r=m%60;
+if(m<60)return m+' min';
 
-  return r?h+' hr '+r+' min':h+' hr';
+let h=Math.floor(m/60);
+
+let r=m%60;
+
+return r?h+' hr '+r+' min':h+' hr';
+
 }
+
 
 function localDateTime(){
-  let d=new Date();
-  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
-  return d.toISOString().slice(0,16);
+
+let d=new Date();
+
+d.setMinutes(
+d.getMinutes()-d.getTimezoneOffset()
+);
+
+return d.toISOString().slice(0,16);
+
 }
+
 
 function localDateTimeFromISO(iso){
-  if(!iso)return '';
 
-  let d=new Date(iso);
+if(!iso)return '';
 
-  if(isNaN(d))return '';
+let d=new Date(iso);
 
-  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+if(isNaN(d))return '';
 
-  return d.toISOString().slice(0,16);
+d.setMinutes(
+d.getMinutes()-d.getTimezoneOffset()
+);
+
+return d.toISOString().slice(0,16);
+
 }
+
 
 function eventTime(e){
-  return e.kind==='timed'?e.start:e.time;
+
+return e.kind==='timed'
+?e.start
+:e.time;
+
 }
+
 
 function eventEnd(e){
-  return e.kind==='timed'?e.end:null;
+
+return e.kind==='timed'
+?e.end
+:null;
+
 }
+
 
 function isDayTime(d){
-  let hm=new Date(d).toTimeString().slice(0,5);
 
-  return hm>=settings.dayStart && hm<settings.nightStart;
+let hm=new Date(d).toTimeString().slice(0,5);
+
+return hm>=settings.dayStart &&
+hm<settings.nightStart;
+
 }
 
 
-/*
-Repair historical events whose category IDs were lost or changed.
+/* =========================================================
+   DATA MIGRATION INSIDE CURRENT FORMAT
+   ========================================================= */
 
-This function ONLY changes category IDs.
+function migrateCurrentEvents(){
 
-It NEVER recreates deleted events.
-*/
-function migrate(){
+let changed=false;
 
-  let changed=false;
 
-  events=events.map(e=>{
+events=events.map(e=>{
 
-    if(!e.categoryId){
+if(!e.categoryId){
 
-      const oldName=
-        e.legacyCategoryName||
-        e.name||
-        e.category||
-        e.eventName||
-        '';
+const oldName=
+e.legacyCategoryName||
+e.name||
+e.category||
+e.eventName||
+'';
 
-      let c=cats.find(x=>x.name===oldName);
 
-      if(!c){
-        c=builtins.find(x=>x.name===oldName);
-      }
+let c=
+cats.find(x=>x.name===oldName);
 
-      if(c){
-        e.categoryId=c.id;
-        changed=true;
-      }else{
 
-        /*
-        Preserve an unknown historical event instead of deleting it.
-        */
-        c=cats.find(x=>x.id==='legacy-unknown');
+if(!c){
 
-        if(!c){
-          c={
-            id:'legacy-unknown',
-            name:'Unknown / Legacy Event',
-            icon:'🐾',
-            kind:e.kind==='timed'?'timed':'instant',
-            notesRequired:false,
-            quantityEnabled:false,
-            quantityLabel:'Amount'
-          };
+c=
+builtins.find(x=>x.name===oldName);
 
-          cats.push(c);
-        }
-
-        e.categoryId=c.id;
-        changed=true;
-      }
-    }
-
-    if(e.kind==='timed'&&!('end'in e)){
-      e.end=null;
-      changed=true;
-    }
-
-    if(e.kind==='timed'&&!e.start&&e.time){
-      e.start=e.time;
-      changed=true;
-    }
-
-    return e;
-  });
-
-  if(changed)save();
 }
 
-migrate();
 
+if(c){
+
+e.categoryId=c.id;
+
+changed=true;
+
+}else{
+
+let unknown=
+cats.find(x=>x.id==='legacy-unknown');
+
+
+if(!unknown){
+
+unknown={
+id:'legacy-unknown',
+name:'Unknown / Legacy Event',
+icon:'🐾',
+kind:e.kind==='timed'?'timed':'instant',
+notesRequired:false,
+quantityEnabled:false,
+quantityLabel:'Amount'
+};
+
+cats.push(unknown);
+
+}
+
+e.categoryId=unknown.id;
+
+changed=true;
+
+}
+
+}
+
+
+if(e.kind==='timed'&&!('end'in e)){
+
+e.end=null;
+
+changed=true;
+
+}
+
+
+if(e.kind==='timed'&&!e.start&&e.time){
+
+e.start=e.time;
+
+changed=true;
+
+}
+
+
+return e;
+
+});
+
+
+if(changed){
+
+save();
+
+}
+
+}
+
+
+migrateCurrentEvents();
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
 
 function openModal(title,html){
-  $('modalTitle').textContent=title;
-  $('modalBody').innerHTML=html;
-  $('modal').classList.add('show');
+
+$('modalTitle').textContent=title;
+
+$('modalBody').innerHTML=html;
+
+$('modal').classList.add('show');
+
 }
 
-$('closeModal').onclick=()=>$('modal').classList.remove('show');
 
+$('closeModal').onclick=()=>
+$('modal').classList.remove('show');
+
+
+/* =========================================================
+   QUICK EVENTS
+   ========================================================= */
 
 function renderQuick(){
 
-  $('quickGrid').innerHTML=cats.map(c=>{
+$('quickGrid').innerHTML=
+cats.map(c=>{
 
-    let running=
-      c.kind==='timed'&&
-      events.some(e=>
-        e.categoryId===c.id&&
-        e.kind==='timed'&&
-        !e.end
-      );
+let running=
+c.kind==='timed' &&
+events.some(
+e=>
+e.categoryId===c.id &&
+e.kind==='timed' &&
+!e.end
+);
 
-    return `
-      <button
-        class="eventbtn ${running?'running':''}"
-        onclick="logCategory('${esc(c.id)}')">
-        <span>${c.icon}</span>${esc(c.name)}
-      </button>
-    `;
 
-  }).join('');
+return `
+<button
+class="eventbtn ${running?'running':''}"
+onclick="logCategory('${esc(c.id)}')">
+
+<span>${c.icon}</span>
+
+${esc(c.name)}
+
+</button>
+`;
+
+}).join('');
+
 }
 
 
 function logCategory(id){
 
-  let c=catById(id);
+let c=catById(id);
 
-  if(!c)return;
+if(!c)return;
 
-  if(c.kind==='timed'){
 
-    let running=events.find(e=>
-      e.categoryId===id&&
-      e.kind==='timed'&&
-      !e.end
-    );
+if(c.kind==='timed'){
 
-    if(running){
-      running.end=new Date().toISOString();
-      save();
-      renderAll();
-      return;
-    }
+let running=
+events.find(
+e=>
+e.categoryId===id &&
+e.kind==='timed' &&
+!e.end
+);
 
-    events.push({
-      id:crypto.randomUUID(),
-      categoryId:id,
-      kind:'timed',
-      start:new Date().toISOString(),
-      end:null,
-      qty:null,
-      notes:''
-    });
 
-    save();
-    renderAll();
-    return;
-  }
+if(running){
 
-  let fields=`
-    <div class="formrow">
-      <label>Time</label>
-      <input id="evTime" type="datetime-local" value="${localDateTime()}">
-    </div>
-  `;
+running.end=new Date().toISOString();
 
-  if(c.quantityEnabled||c.kind==='quantity'){
-    fields+=`
-      <div class="formrow">
-        <label>${esc(c.quantityLabel||'Amount')}</label>
-        <input id="evQty" type="number" step="any" placeholder="Optional">
-      </div>
-    `;
-  }
+save();
 
-  fields+=`
-    <div class="formrow">
-      <label>Notes${c.notesRequired?'':' (optional)'}</label>
-      <textarea id="evNotes" placeholder="What happened?"></textarea>
-    </div>
-    <button class="primary" onclick="saveInstant('${esc(id)}')">Save</button>
-  `;
+renderAll();
 
-  openModal('Log '+c.name,fields);
+return;
+
+}
+
+
+events.push({
+
+id:crypto.randomUUID(),
+
+categoryId:id,
+
+kind:'timed',
+
+start:new Date().toISOString(),
+
+end:null,
+
+qty:null,
+
+notes:''
+
+});
+
+
+save();
+
+renderAll();
+
+return;
+
+}
+
+
+let fields=`
+
+<div class="formrow">
+
+<label>Time</label>
+
+<input
+id="evTime"
+type="datetime-local"
+value="${localDateTime()}">
+
+</div>
+`;
+
+
+if(c.quantityEnabled||c.kind==='quantity'){
+
+fields+=`
+
+<div class="formrow">
+
+<label>${esc(c.quantityLabel||'Amount')}</label>
+
+<input
+id="evQty"
+type="number"
+step="any"
+placeholder="Optional">
+
+</div>
+`;
+
+}
+
+
+fields+=`
+
+<div class="formrow">
+
+<label>
+Notes${c.notesRequired?'':' (optional)'}
+</label>
+
+<textarea
+id="evNotes"
+placeholder="What happened?"></textarea>
+
+</div>
+
+<button
+class="primary"
+onclick="saveInstant('${esc(id)}')">
+
+Save
+
+</button>
+`;
+
+
+openModal(
+'Log '+c.name,
+fields
+);
+
 }
 
 
 window.saveInstant=id=>{
 
-  let c=catById(id);
+let c=catById(id);
 
-  if(!c)return;
+if(!c)return;
 
-  let t=new Date($('evTime').value);
 
-  if(isNaN(t)){
-    alert('Please enter a valid time.');
-    return;
-  }
+let t=new Date($('evTime').value);
 
-  let notes=$('evNotes').value;
+if(isNaN(t)){
 
-  if(c.notesRequired&&!notes.trim()){
-    alert('Please add a note for this category.');
-    return;
-  }
+alert('Please enter a valid time.');
 
-  events.push({
-    id:crypto.randomUUID(),
-    categoryId:id,
-    kind:c.kind,
-    time:t.toISOString(),
-    qty:$('evQty')?Number($('evQty').value)||null:null,
-    notes
-  });
+return;
 
-  save();
+}
 
-  $('modal').classList.remove('show');
 
-  renderAll();
+let notes=$('evNotes').value;
+
+
+if(c.notesRequired&&!notes.trim()){
+
+alert('Please add a note for this category.');
+
+return;
+
+}
+
+
+events.push({
+
+id:crypto.randomUUID(),
+
+categoryId:id,
+
+kind:c.kind,
+
+time:t.toISOString(),
+
+qty:$('evQty')
+?Number($('evQty').value)||null
+:null,
+
+notes
+
+});
+
+
+save();
+
+$('modal').classList.remove('show');
+
+renderAll();
+
 };
 
 
+/* =========================================================
+   TODAY
+   ========================================================= */
+
 function todayEvents(){
 
-  let a=new Date();
+let a=new Date();
 
-  return events
-    .filter(e=>
-      new Date(eventTime(e)).toDateString()===a.toDateString()
-    )
-    .sort((a,b)=>
-      new Date(eventTime(b))-new Date(eventTime(a))
-    );
+return events
+.filter(
+e=>
+new Date(eventTime(e)).toDateString()===
+a.toDateString()
+)
+.sort(
+(a,b)=>
+new Date(eventTime(b))-
+new Date(eventTime(a))
+);
+
 }
 
 
 function renderToday(){
 
-  let a=todayEvents();
+let a=todayEvents();
 
-  $('peeCount').textContent=
-    events.filter(e=>
-      e.categoryId==='pee'&&
-      new Date(eventTime(e)).toDateString()===new Date().toDateString()
-    ).length;
 
-  $('poopCount').textContent=
-    events.filter(e=>
-      e.categoryId==='poop'&&
-      new Date(eventTime(e)).toDateString()===new Date().toDateString()
-    ).length;
+$('peeCount').textContent=
+events.filter(
+e=>
+e.categoryId==='pee' &&
+new Date(eventTime(e)).toDateString()===
+new Date().toDateString()
+).length;
 
-  $('sleepTotal').textContent=
-    dur(
-      a
-        .filter(e=>
-          e.categoryId==='sleep'&&
-          e.kind==='timed'&&
-          e.end
-        )
-        .reduce(
-          (s,e)=>s+(new Date(e.end)-new Date(e.start)),
-          0
-        )||0
-    );
 
-  let running=events.filter(e=>
-    e.kind==='timed'&&!e.end
-  );
+$('poopCount').textContent=
+events.filter(
+e=>
+e.categoryId==='poop' &&
+new Date(eventTime(e)).toDateString()===
+new Date().toDateString()
+).length;
 
-  $('runningCard').innerHTML=
-    running.length
-      ?`
-        <div class="card">
-          <h3>Currently active</h3>
-          ${running.map(e=>`
-            <div class="row">
-              <span>${iconFor(e.categoryId)}</span>
-              <div class="grow">
-                <b>${esc(nameFor(e.categoryId))}</b>
-                <div class="muted">
-                  Started ${fmtTime(e.start)} · ${dur(Date.now()-new Date(e.start))}
-                </div>
-              </div>
-              <button class="primary" onclick="stopEvent('${e.id}')">
-                STOP
-              </button>
-            </div>
-          `).join('')}
-        </div>
-      `
-      :'';
 
-  $('timeline').innerHTML=
-    a.length
-      ?a.map(e=>{
+$('sleepTotal').textContent=
+dur(
+a
+.filter(
+e=>
+e.categoryId==='sleep' &&
+e.kind==='timed' &&
+e.end
+)
+.reduce(
+(s,e)=>
+s+
+(
+new Date(e.end)-
+new Date(e.start)
+),
+0
+)||0
+);
 
-        let timeText=
-          e.kind==='timed'
-            ?fmtTime(e.start)+
-              (e.end
-                ?' · '+dur(new Date(e.end)-new Date(e.start))
-                :' · Active')
-            :fmtTime(e.time);
 
-        return `
-          <div class="row">
-            <span>${iconFor(e.categoryId)}</span>
-            <div class="grow">
-              <b>${esc(nameFor(e.categoryId))}</b>
-              <div class="muted">
-                ${timeText}${e.qty!=null?' · '+e.qty:''}
-              </div>
-              ${e.notes
-                ?`<div class="muted">${esc(e.notes)}</div>`
-                :''}
-            </div>
-            <button
-              class="smallbtn"
-              onclick="editEvent('${e.id}')">
-              Edit
-            </button>
-          </div>
-        `;
+let running=
+events.filter(
+e=>
+e.kind==='timed' &&
+!e.end
+);
 
-      }).join('')
-      :'<div class="empty">No events yet.</div>';
+
+$('runningCard').innerHTML=
+running.length
+?`
+<div class="card">
+
+<h3>Currently active</h3>
+
+${running.map(e=>`
+
+<div class="row">
+
+<span>${iconFor(e.categoryId)}</span>
+
+<div class="grow">
+
+<b>${esc(nameFor(e.categoryId))}</b>
+
+<div class="muted">
+
+Started ${fmtTime(e.start)}
+·
+${dur(Date.now()-new Date(e.start))}
+
+</div>
+
+</div>
+
+<button
+class="primary"
+onclick="stopEvent('${e.id}')">
+
+STOP
+
+</button>
+
+</div>
+
+`).join('')}
+
+</div>
+`
+:'';
+
+
+$('timeline').innerHTML=
+a.length
+?a.map(e=>{
+
+let timeText=
+e.kind==='timed'
+?fmtTime(e.start)+
+(
+e.end
+?' · '+dur(new Date(e.end)-new Date(e.start))
+:' · Active'
+)
+:fmtTime(e.time);
+
+
+return `
+
+<div class="row">
+
+<span>${iconFor(e.categoryId)}</span>
+
+<div class="grow">
+
+<b>${esc(nameFor(e.categoryId))}</b>
+
+<div class="muted">
+
+${timeText}
+${e.qty!=null?' · '+e.qty:''}
+
+</div>
+
+${e.notes
+?`<div class="muted">${esc(e.notes)}</div>`
+:''}
+
+</div>
+
+<button
+class="smallbtn"
+onclick="editEvent('${e.id}')">
+
+Edit
+
+</button>
+
+</div>
+`;
+
+}).join('')
+:
+'<div class="empty">No events yet.</div>';
+
 }
 
 
 window.stopEvent=id=>{
 
-  let e=events.find(x=>x.id===id);
+let e=events.find(x=>x.id===id);
 
-  if(e&&e.kind==='timed'){
-    e.end=new Date().toISOString();
-    save();
-    renderAll();
-  }
+if(e&&e.kind==='timed'){
+
+e.end=new Date().toISOString();
+
+save();
+
+renderAll();
+
+}
+
 };
 
 
+/* =========================================================
+   EDIT EVENTS
+   ========================================================= */
+
 window.editEvent=id=>{
 
-  let e=events.find(x=>x.id===id);
+let e=events.find(x=>x.id===id);
 
-  if(!e)return;
+if(!e)return;
 
-  let c=catById(e.categoryId);
 
-  let html='';
+let c=catById(e.categoryId);
 
-  if(e.kind!=='timed'){
+let html='';
 
-    html+=`
-      <div class="formrow">
-        <label>Time</label>
-        <input
-          id="editTime"
-          type="datetime-local"
-          value="${localDateTimeFromISO(e.time)}">
-      </div>
-    `;
 
-    if(c?.quantityEnabled||e.kind==='quantity'){
-      html+=`
-        <div class="formrow">
-          <label>${esc(c?.quantityLabel||'Amount')}</label>
-          <input
-            id="editQty"
-            type="number"
-            step="any"
-            value="${e.qty??''}">
-        </div>
-      `;
-    }
+if(e.kind!=='timed'){
 
-    html+=`
-      <div class="formrow">
-        <label>Notes${c?.notesRequired?'':' (optional)'}</label>
-        <textarea id="editNotes">${esc(e.notes)}</textarea>
-      </div>
+html+=`
 
-      <button
-        class="primary"
-        onclick="updateEvent('${id}')">
-        Save changes
-      </button>
+<div class="formrow">
 
-      <button
-        class="secondary"
-        onclick="deleteEvent('${id}')">
-        Delete
-      </button>
-    `;
+<label>Time</label>
 
-  }else{
+<input
+id="editTime"
+type="datetime-local"
+value="${localDateTimeFromISO(e.time)}">
 
-    html+=`
-      <div class="formrow">
-        <label>Start time</label>
-        <input
-          id="editStart"
-          type="datetime-local"
-          value="${localDateTimeFromISO(e.start)}">
-      </div>
+</div>
+`;
 
-      <div class="formrow">
-        <label>End time</label>
-        <input
-          id="editEnd"
-          type="datetime-local"
-          value="${e.end?localDateTimeFromISO(e.end):''}">
 
-        <div class="muted">
-          Leave blank if still active.
-        </div>
-      </div>
+if(c?.quantityEnabled||e.kind==='quantity'){
 
-      <div class="formrow">
-        <label>Notes${c?.notesRequired?'':' (optional)'}</label>
-        <textarea id="editNotes">${esc(e.notes)}</textarea>
-      </div>
+html+=`
 
-      <button
-        class="primary"
-        onclick="updateEvent('${id}')">
-        Save changes
-      </button>
+<div class="formrow">
 
-      <button
-        class="secondary"
-        onclick="deleteEvent('${id}')">
-        Delete
-      </button>
-    `;
-  }
+<label>
+${esc(c?.quantityLabel||'Amount')}
+</label>
 
-  openModal('Edit '+(c?.name||'event'),html);
+<input
+id="editQty"
+type="number"
+step="any"
+value="${e.qty??''}">
+
+</div>
+`;
+
+}
+
+
+html+=`
+
+<div class="formrow">
+
+<label>
+Notes${c?.notesRequired?'':' (optional)'}
+</label>
+
+<textarea id="editNotes">${esc(e.notes)}</textarea>
+
+</div>
+
+<button
+class="primary"
+onclick="updateEvent('${id}')">
+
+Save changes
+
+</button>
+
+<button
+class="secondary"
+onclick="deleteEvent('${id}')">
+
+Delete
+
+</button>
+
+`;
+
+}else{
+
+html+=`
+
+<div class="formrow">
+
+<label>Start time</label>
+
+<input
+id="editStart"
+type="datetime-local"
+value="${localDateTimeFromISO(e.start)}">
+
+</div>
+
+<div class="formrow">
+
+<label>End time</label>
+
+<input
+id="editEnd"
+type="datetime-local"
+value="${e.end?localDateTimeFromISO(e.end):''}">
+
+<div class="muted">
+Leave blank if still active.
+</div>
+
+</div>
+
+<div class="formrow">
+
+<label>
+Notes${c?.notesRequired?'':' (optional)'}
+</label>
+
+<textarea id="editNotes">${esc(e.notes)}</textarea>
+
+</div>
+
+<button
+class="primary"
+onclick="updateEvent('${id}')">
+
+Save changes
+
+</button>
+
+<button
+class="secondary"
+onclick="deleteEvent('${id}')">
+
+Delete
+
+</button>
+
+`;
+
+}
+
+
+openModal(
+'Edit '+(c?.name||'event'),
+html
+);
+
 };
 
 
 window.updateEvent=id=>{
 
-  let e=events.find(x=>x.id===id);
+let e=events.find(x=>x.id===id);
 
-  if(!e)return;
+if(!e)return;
 
-  let c=catById(e.categoryId);
 
-  let notes=$('editNotes').value;
+let c=catById(e.categoryId);
 
-  if(c?.notesRequired&&!notes.trim()){
-    alert('Please add a note for this category.');
-    return;
-  }
+let notes=$('editNotes').value;
 
-  if(e.kind!=='timed'){
 
-    let t=new Date($('editTime').value);
+if(c?.notesRequired&&!notes.trim()){
 
-    if(isNaN(t)){
-      alert('Please enter a valid time.');
-      return;
-    }
+alert('Please add a note for this category.');
 
-    e.time=t.toISOString();
+return;
 
-    if($('editQty')){
-      e.qty=Number($('editQty').value)||null;
-    }
+}
 
-    e.notes=notes;
 
-  }else{
+if(e.kind!=='timed'){
 
-    let s=new Date($('editStart').value);
+let t=new Date($('editTime').value);
 
-    if(isNaN(s)){
-      alert('Please enter a valid start time.');
-      return;
-    }
+if(isNaN(t)){
 
-    let ev=$('editEnd').value;
+alert('Please enter a valid time.');
 
-    if(ev){
+return;
 
-      let end=new Date(ev);
+}
 
-      if(isNaN(end)||end<s){
-        alert('End time cannot be before start time.');
-        return;
-      }
 
-      e.end=end.toISOString();
+e.time=t.toISOString();
 
-    }else{
-      e.end=null;
-    }
 
-    e.start=s.toISOString();
-    e.notes=notes;
-  }
+if($('editQty')){
 
-  save();
+e.qty=
+Number($('editQty').value)||null;
 
-  $('modal').classList.remove('show');
+}
 
-  renderAll();
+
+e.notes=notes;
+
+}else{
+
+let s=new Date($('editStart').value);
+
+if(isNaN(s)){
+
+alert('Please enter a valid start time.');
+
+return;
+
+}
+
+
+let ev=$('editEnd').value;
+
+
+if(ev){
+
+let end=new Date(ev);
+
+
+if(isNaN(end)||end<s){
+
+alert(
+'End time cannot be before start time.'
+);
+
+return;
+
+}
+
+
+e.end=end.toISOString();
+
+}else{
+
+e.end=null;
+
+}
+
+
+e.start=s.toISOString();
+
+e.notes=notes;
+
+}
+
+
+save();
+
+$('modal').classList.remove('show');
+
+renderAll();
+
 };
 
 
 window.deleteEvent=id=>{
 
-  if(!confirm('Delete this event?'))return;
+if(!confirm(
+'Delete this event permanently from the current app data?'
+))return;
 
-  events=events.filter(e=>e.id!==id);
 
-  save();
+/*
+   THIS IS A REAL DELETE.
 
-  $('modal').classList.remove('show');
+   We remove it from the active events array and immediately
+   write the resulting array back to storage.
 
-  renderAll();
+   Because migration is now permanently marked complete,
+   the old event cannot be automatically restored.
+*/
+events=
+events.filter(
+e=>e.id!==id
+);
+
+
+save();
+
+
+$('modal').classList.remove('show');
+
+renderAll();
+
 };
 
 
+/* =========================================================
+   TREND FUNCTIONS
+   ========================================================= */
+
 function completeEvents(){
-  return events.filter(e=>e.kind!=='timed'||e.end);
+
+return events.filter(
+e=>
+e.kind!=='timed'||
+e.end
+);
+
 }
+
 
 function getStart(e){
-  return new Date(eventTime(e));
+
+return new Date(eventTime(e));
+
 }
+
 
 function getReferenceEnd(e){
-  return e.kind==='timed'&&e.end
-    ?new Date(e.end)
-    :getStart(e);
+
+return e.kind==='timed'&&e.end
+?new Date(e.end)
+:getStart(e);
+
 }
 
+
 function eventsForCategory(id){
-  return completeEvents()
-    .filter(e=>e.categoryId===id)
-    .sort((a,b)=>getStart(a)-getStart(b));
+
+return completeEvents()
+.filter(e=>e.categoryId===id)
+.sort(
+(a,b)=>
+getStart(a)-getStart(b)
+);
+
 }
+
 
 function inRange(e){
 
-  let cutoff=new Date();
+let cutoff=new Date();
 
-  cutoff.setDate(
-    cutoff.getDate()-activeRange+1
-  );
+cutoff.setDate(
+cutoff.getDate()-activeRange+1
+);
 
-  cutoff.setHours(0,0,0,0);
+cutoff.setHours(0,0,0,0);
 
-  return getStart(e)>=cutoff;
+return getStart(e)>=cutoff;
+
 }
+
 
 function average(vals){
-  return vals.length
-    ?vals.reduce((a,b)=>a+b,0)/vals.length
-    :null;
+
+return vals.length
+?vals.reduce((a,b)=>a+b,0)/vals.length
+:null;
+
 }
+
 
 function avgInterval(id,filterFn){
 
-  let a=eventsForCategory(id)
-    .filter(inRange)
-    .filter(filterFn||(()=>true));
+let a=
+eventsForCategory(id)
+.filter(inRange)
+.filter(filterFn||(()=>true));
 
-  let vals=[];
 
-  for(let i=1;i<a.length;i++){
-    vals.push(
-      getStart(a[i])-getStart(a[i-1])
-    );
-  }
+let vals=[];
 
-  return average(vals);
+
+for(let i=1;i<a.length;i++){
+
+vals.push(
+getStart(a[i])-
+getStart(a[i-1])
+);
+
 }
+
+
+return average(vals);
+
+}
+
 
 function avgDuration(id,filterFn){
 
-  let a=eventsForCategory(id)
-    .filter(inRange)
-    .filter(filterFn||(()=>true));
+let a=
+eventsForCategory(id)
+.filter(inRange)
+.filter(filterFn||(()=>true));
 
-  return average(
-    a
-      .filter(e=>e.kind==='timed'&&e.end)
-      .map(e=>new Date(e.end)-new Date(e.start))
-  );
+
+return average(
+a
+.filter(
+e=>
+e.kind==='timed'&&
+e.end
+)
+.map(
+e=>
+new Date(e.end)-
+new Date(e.start)
+)
+);
+
 }
+
 
 function relationAverage(
-  fromId,
-  toId,
-  mode,
-  windowHours,
-  filter
+fromId,
+toId,
+mode,
+windowHours,
+filter
 ){
 
-  let from=eventsForCategory(fromId).filter(inRange);
+let from=
+eventsForCategory(fromId)
+.filter(inRange);
 
-  let to=eventsForCategory(toId).filter(inRange);
 
-  let vals=[];
+let to=
+eventsForCategory(toId)
+.filter(inRange);
 
-  for(let b of to){
 
-    let bTime=getStart(b);
+let vals=[];
 
-    let prior=from
-      .filter(a=>{
 
-        let ref=getReferenceEnd(a);
+for(let b of to){
 
-        return ref<=bTime&&
-          bTime-ref<=windowHours*3600000;
+let bTime=getStart(b);
 
-      })
-      .sort(
-        (a,c)=>getReferenceEnd(c)-getReferenceEnd(a)
-      )[0];
 
-    if(prior){
+let prior=
+from
+.filter(a=>{
 
-      let v=bTime-getReferenceEnd(prior);
+let ref=getReferenceEnd(a);
 
-      if(!filter||filter(prior,b)){
-        vals.push(v);
-      }
-    }
-  }
+return ref<=bTime &&
+bTime-ref<=windowHours*3600000;
 
-  return average(vals);
+})
+.sort(
+(a,c)=>
+getReferenceEnd(c)-
+getReferenceEnd(a)
+)[0];
+
+
+if(prior){
+
+let v=
+bTime-
+getReferenceEnd(prior);
+
+
+if(!filter||filter(prior,b)){
+
+vals.push(v);
+
 }
 
-function relationLabel(t){
-  return t==='after'?'After':'Before';
 }
+
+}
+
+
+return average(vals);
+
+}
+
 
 function periodFilter(period){
 
-  if(period==='day'){
-    return e=>isDayTime(getStart(e));
-  }
+if(period==='day')
+return e=>isDayTime(getStart(e));
 
-  if(period==='night'){
-    return e=>!isDayTime(getStart(e));
-  }
+if(period==='night')
+return e=>!isDayTime(getStart(e));
 
-  return ()=>true;
+return ()=>true;
+
 }
+
 
 function trendResult(t){
 
-  if(t.measure==='interval'){
+if(t.measure==='interval'){
 
-    if(t.compare==='daynight'){
+if(t.compare==='daynight'){
 
-      let day=avgInterval(
-        t.categoryId,
-        e=>isDayTime(getStart(e))
-      );
+let day=
+avgInterval(
+t.categoryId,
+e=>isDayTime(getStart(e))
+);
 
-      let night=avgInterval(
-        t.categoryId,
-        e=>!isDayTime(getStart(e))
-      );
+let night=
+avgInterval(
+t.categoryId,
+e=>!isDayTime(getStart(e))
+);
 
-      return {
-        html:`
-          <div class="row">
-            <span class="grow">Day</span>
-            <b>${day==null?'No data':dur(day)}</b>
-          </div>
 
-          <div class="row">
-            <span class="grow">Night</span>
-            <b>${night==null?'No data':dur(night)}</b>
-          </div>
-        `
-      };
-    }
+return {
 
-    let v=avgInterval(
-      t.categoryId,
-      periodFilter(t.period)
-    );
+html:`
 
-    return {
-      html:`
-        <div class="trendvalue">
-          ${v==null?'No data':dur(v)}
-        </div>
-      `
-    };
-  }
+<div class="row">
 
-  if(t.measure==='duration'){
+<span class="grow">
+Day
+</span>
 
-    if(t.compare==='daynight'){
+<b>
+${day==null?'No data':dur(day)}
+</b>
 
-      let day=avgDuration(
-        t.categoryId,
-        e=>isDayTime(getStart(e))
-      );
+</div>
 
-      let night=avgDuration(
-        t.categoryId,
-        e=>!isDayTime(getStart(e))
-      );
+<div class="row">
 
-      return {
-        html:`
-          <div class="row">
-            <span class="grow">Day</span>
-            <b>${day==null?'No data':dur(day)}</b>
-          </div>
+<span class="grow">
+Night
+</span>
 
-          <div class="row">
-            <span class="grow">Night</span>
-            <b>${night==null?'No data':dur(night)}</b>
-          </div>
-        `
-      };
-    }
+<b>
+${night==null?'No data':dur(night)}
+</b>
 
-    let v=avgDuration(
-      t.categoryId,
-      periodFilter(t.period)
-    );
+</div>
 
-    return {
-      html:`
-        <div class="trendvalue">
-          ${v==null?'No data':dur(v)}
-        </div>
-      `
-    };
-  }
+`
 
-  if(t.measure==='count'){
+};
 
-    let n=eventsForCategory(t.categoryId)
-      .filter(inRange)
-      .filter(periodFilter(t.period))
-      .length;
-
-    return {
-      html:`<div class="trendvalue">${n}</div>`
-    };
-  }
-
-  if(t.measure==='totalduration'){
-
-    let vals=eventsForCategory(t.categoryId)
-      .filter(inRange)
-      .filter(periodFilter(t.period))
-      .filter(e=>e.kind==='timed'&&e.end)
-      .map(e=>new Date(e.end)-new Date(e.start));
-
-    return {
-      html:`
-        <div class="trendvalue">
-          ${vals.length
-            ?dur(vals.reduce((a,b)=>a+b,0))
-            :'No data'}
-        </div>
-      `
-    };
-  }
-
-  if(t.measure==='after'||t.measure==='before'){
-
-    let v=relationAverage(
-      t.fromCategoryId,
-      t.toCategoryId,
-      t.measure,
-      t.windowHours||24
-    );
-
-    if(t.measure==='before'){
-      v=relationAverage(
-        t.toCategoryId,
-        t.fromCategoryId,
-        'after',
-        t.windowHours||24
-      );
-    }
-
-    return {
-      html:`
-        <div class="trendvalue">
-          ${v==null?'No data':dur(v)}
-        </div>
-      `
-    };
-  }
-
-  return {
-    html:'No data'
-  };
 }
+
+
+let v=
+avgInterval(
+t.categoryId,
+periodFilter(t.period)
+);
+
+
+return {
+
+html:`
+
+<div class="trendvalue">
+
+${v==null?'No data':dur(v)}
+
+</div>
+
+`
+
+};
+
+}
+
+
+if(t.measure==='duration'){
+
+if(t.compare==='daynight'){
+
+let day=
+avgDuration(
+t.categoryId,
+e=>isDayTime(getStart(e))
+);
+
+
+let night=
+avgDuration(
+t.categoryId,
+e=>!isDayTime(getStart(e))
+);
+
+
+return {
+
+html:`
+
+<div class="row">
+
+<span class="grow">
+Day
+</span>
+
+<b>
+${day==null?'No data':dur(day)}
+</b>
+
+</div>
+
+<div class="row">
+
+<span class="grow">
+Night
+</span>
+
+<b>
+${night==null?'No data':dur(night)}
+</b>
+
+</div>
+
+`
+
+};
+
+}
+
+
+let v=
+avgDuration(
+t.categoryId,
+periodFilter(t.period)
+);
+
+
+return {
+
+html:`
+
+<div class="trendvalue">
+
+${v==null?'No data':dur(v)}
+
+</div>
+
+`
+
+};
+
+}
+
+
+if(t.measure==='count'){
+
+let n=
+eventsForCategory(t.categoryId)
+.filter(inRange)
+.filter(periodFilter(t.period))
+.length;
+
+
+return {
+
+html:`
+
+<div class="trendvalue">
+${n}
+</div>
+
+`
+
+};
+
+}
+
+
+if(t.measure==='totalduration'){
+
+let vals=
+eventsForCategory(t.categoryId)
+.filter(inRange)
+.filter(periodFilter(t.period))
+.filter(
+e=>
+e.kind==='timed'&&
+e.end
+)
+.map(
+e=>
+new Date(e.end)-
+new Date(e.start)
+);
+
+
+return {
+
+html:`
+
+<div class="trendvalue">
+
+${vals.length
+?dur(vals.reduce((a,b)=>a+b,0))
+:'No data'}
+
+</div>
+
+`
+
+};
+
+}
+
+
+if(t.measure==='after'||t.measure==='before'){
+
+let v;
+
+
+if(t.measure==='after'){
+
+v=
+relationAverage(
+t.fromCategoryId,
+t.toCategoryId,
+t.measure,
+t.windowHours||24
+);
+
+}else{
+
+v=
+relationAverage(
+t.toCategoryId,
+t.fromCategoryId,
+'after',
+t.windowHours||24
+);
+
+}
+
+
+return {
+
+html:`
+
+<div class="trendvalue">
+
+${v==null?'No data':dur(v)}
+
+</div>
+
+`
+
+};
+
+}
+
+
+return {
+html:'No data'
+};
+
+}
+
 
 function trendDescription(t){
 
-  if(t.measure==='interval'){
-    return `${nameFor(t.categoryId)} · average interval${
-      t.compare==='daynight'
-        ?' · day vs night'
-        :t.period
-          ?' · '+t.period
-          :''
-    }`;
-  }
+if(t.measure==='interval')
+return `${nameFor(t.categoryId)} · average interval${t.compare==='daynight'?' · day vs night':t.period?' · '+t.period:''}`;
 
-  if(t.measure==='duration'){
-    return `${nameFor(t.categoryId)} · average duration${
-      t.compare==='daynight'
-        ?' · day vs night'
-        :t.period
-          ?' · '+t.period
-          :''
-    }`;
-  }
+if(t.measure==='duration')
+return `${nameFor(t.categoryId)} · average duration${t.compare==='daynight'?' · day vs night':t.period?' · '+t.period:''}`;
 
-  if(t.measure==='count'){
-    return `${nameFor(t.categoryId)} · count${
-      t.period?' · '+t.period:''
-    }`;
-  }
+if(t.measure==='count')
+return `${nameFor(t.categoryId)} · count${t.period?' · '+t.period:''}`;
 
-  if(t.measure==='totalduration'){
-    return `${nameFor(t.categoryId)} · total duration${
-      t.period?' · '+t.period:''
-    }`;
-  }
+if(t.measure==='totalduration')
+return `${nameFor(t.categoryId)} · total duration${t.period?' · '+t.period:''}`;
 
-  return `${nameFor(t.fromCategoryId)} → ${nameFor(t.toCategoryId)} · average time`;
+return `${nameFor(t.fromCategoryId)} → ${nameFor(t.toCategoryId)} · average time`;
+
 }
 
 
 function renderTrends(){
 
-  $('savedTrends').innerHTML=
-    trends.length
-      ?trends.map(t=>{
+$('savedTrends').innerHTML=
+trends.length
+?trends.map(t=>{
 
-        let r=trendResult(t);
+let r=trendResult(t);
 
-        return `
-          <div class="card trendcard">
 
-            <h3>${esc(t.name)}</h3>
+return `
 
-            <div class="trendmeta">
-              ${esc(trendDescription(t))}
-            </div>
+<div class="card trendcard">
 
-            ${r.html}
+<h3>
+${esc(t.name)}
+</h3>
 
-            <div class="actions">
+<div class="trendmeta">
+${esc(trendDescription(t))}
+</div>
 
-              <button
-                class="secondary mini"
-                onclick="editTrend('${t.id}')">
-                Edit
-              </button>
+${r.html}
 
-              <button
-                class="secondary mini"
-                onclick="deleteTrend('${t.id}')">
-                Delete
-              </button>
+<div class="actions">
 
-            </div>
+<button
+class="secondary mini"
+onclick="editTrend('${t.id}')">
 
-          </div>
-        `;
+Edit
 
-      }).join('')
-      :'<div class="empty">No saved trends yet.</div>';
+</button>
 
-  drawChart();
+<button
+class="secondary mini"
+onclick="deleteTrend('${t.id}')">
+
+Delete
+
+</button>
+
+</div>
+
+</div>
+
+`;
+
+}).join('')
+:
+'<div class="empty">No saved trends yet.</div>';
+
+
+drawChart();
+
 }
 
 
 window.deleteTrend=id=>{
 
-  if(!confirm('Delete this trend?'))return;
+if(!confirm('Delete this trend?'))return;
 
-  trends=trends.filter(t=>t.id!==id);
+trends=
+trends.filter(
+t=>t.id!==id
+);
 
-  save();
+save();
 
-  renderTrends();
+renderTrends();
+
 };
 
+
 window.editTrend=id=>
-  openTrendEditor(trends.find(t=>t.id===id));
+openTrendEditor(
+trends.find(t=>t.id===id)
+);
 
 
 function trendEditorHTML(t){
 
-  let catOptions=cats.map(c=>
-    `<option value="${esc(c.id)}">
-      ${esc(c.icon+' '+c.name)}
-    </option>`
-  ).join('');
+let catOptions=
+cats.map(
+c=>
+`<option value="${esc(c.id)}">${esc(c.icon+' '+c.name)}</option>`
+).join('');
 
-  let measure=t?.measure||'interval';
 
-  return `
-    <div class="formrow">
-      <label>Trend name</label>
-      <input
-        id="trendName"
-        value="${esc(t?.name||'My trend')}"
-        placeholder="e.g. Play to pee">
-    </div>
+let measure=
+t?.measure||
+'interval';
 
-    <div class="formrow">
-      <label>What do you want to measure?</label>
 
-      <select id="trendMeasure">
+return `
 
-        <option value="interval"
-          ${measure==='interval'?'selected':''}>
-          Average time between events
-        </option>
+<div class="formrow">
 
-        <option value="duration"
-          ${measure==='duration'?'selected':''}>
-          Average duration
-        </option>
+<label>
+Trend name
+</label>
 
-        <option value="totalduration"
-          ${measure==='totalduration'?'selected':''}>
-          Total duration
-        </option>
+<input
+id="trendName"
+value="${esc(t?.name||'My trend')}"
+placeholder="e.g. Play to pee">
 
-        <option value="count"
-          ${measure==='count'?'selected':''}>
-          Event count
-        </option>
+</div>
 
-        <option value="after"
-          ${measure==='after'?'selected':''}>
-          Average time from one event to another
-        </option>
 
-        <option value="before"
-          ${measure==='before'?'selected':''}>
-          Average time from one event backward to another
-        </option>
+<div class="formrow">
 
-      </select>
-    </div>
+<label>
+What do you want to measure?
+</label>
 
-    <div id="trendFields"></div>
+<select id="trendMeasure">
 
-    <div class="sectionnote">
-      Results use the last ${activeRange} days selected on the Trends page.
-      You can change the range without changing the saved trend.
-    </div>
+<option
+value="interval"
+${measure==='interval'?'selected':''}>
 
-    <button
-      class="primary"
-      onclick="saveTrend('${esc(t?.id||'')}')">
-      Save trend
-    </button>
-  `;
+Average time between events
+
+</option>
+
+<option
+value="duration"
+${measure==='duration'?'selected':''}>
+
+Average duration
+
+</option>
+
+<option
+value="totalduration"
+${measure==='totalduration'?'selected':''}>
+
+Total duration
+
+</option>
+
+<option
+value="count"
+${measure==='count'?'selected':''}>
+
+Event count
+
+</option>
+
+<option
+value="after"
+${measure==='after'?'selected':''}>
+
+Average time from one event to another
+
+</option>
+
+<option
+value="before"
+${measure==='before'?'selected':''}>
+
+Average time from one event backward to another
+
+</option>
+
+</select>
+
+</div>
+
+
+<div id="trendFields"></div>
+
+
+<div class="sectionnote">
+
+Results use the last ${activeRange} days selected on the Trends page.
+
+</div>
+
+
+<button
+class="primary"
+onclick="saveTrend('${esc(t?.id||'')}')">
+
+Save trend
+
+</button>
+
+`;
+
 }
 
 
 function fillTrendFields(t){
 
-  let m=$('trendMeasure').value;
+let m=$('trendMeasure').value;
 
-  let html='';
+let html='';
 
-  let catOptions=cats.map(c=>
-    `<option value="${esc(c.id)}">
-      ${esc(c.icon+' '+c.name)}
-    </option>`
-  ).join('');
 
-  if(
-    m==='interval'||
-    m==='duration'||
-    m==='count'||
-    m==='totalduration'
-  ){
+let catOptions=
+cats.map(
+c=>
+`<option value="${esc(c.id)}">${esc(c.icon+' '+c.name)}</option>`
+).join('');
 
-    let selected=t?.categoryId||cats[0]?.id||'';
 
-    html+=`
-      <div class="formrow">
-        <label>Category</label>
-        <select id="trendCategory">
-          ${catOptions}
-        </select>
-      </div>
-    `;
+if(
+m==='interval'||
+m==='duration'||
+m==='count'||
+m==='totalduration'
+){
 
-    if(m==='interval'||m==='duration'){
+let selected=
+t?.categoryId||
+cats[0]?.id||
+'';
 
-      html+=`
-        <div class="formrow">
-          <label>Compare</label>
 
-          <select id="trendCompare">
-            <option value="none">All times</option>
-            <option value="daynight">Day vs night</option>
-          </select>
-        </div>
-      `;
-    }
+html+=`
 
-    if(m==='count'||m==='totalduration'){
+<div class="formrow">
 
-      html+=`
-        <div class="formrow">
-          <label>Time period</label>
+<label>
+Category
+</label>
 
-          <select id="trendPeriod">
-            <option value="all">Any time</option>
-            <option value="day">Day</option>
-            <option value="night">Night</option>
-          </select>
-        </div>
-      `;
-    }
+<select id="trendCategory">
+${catOptions}
+</select>
 
-  }else{
+</div>
 
-    let a=t?.fromCategoryId||cats[0]?.id||'';
+`;
 
-    let b=t?.toCategoryId||cats[0]?.id||'';
 
-    html+=`
-      <div class="formrow">
-        <label>Starting event</label>
-        <select id="trendFrom">
-          ${catOptions}
-        </select>
-      </div>
+if(
+m==='interval'||
+m==='duration'
+){
 
-      <div class="formrow">
-        <label>Ending event</label>
-        <select id="trendTo">
-          ${catOptions}
-        </select>
-      </div>
+html+=`
 
-      <div class="formrow">
-        <label>Maximum time to connect events</label>
+<div class="formrow">
 
-        <select id="trendWindow">
-          <option value="1">1 hour</option>
-          <option value="2">2 hours</option>
-          <option value="4">4 hours</option>
-          <option value="8">8 hours</option>
-          <option value="12">12 hours</option>
-          <option value="24">24 hours</option>
-          <option value="48">48 hours</option>
-        </select>
-      </div>
-    `;
-  }
+<label>
+Compare
+</label>
 
-  $('trendFields').innerHTML=html;
+<select id="trendCompare">
 
-  if($('trendCategory')){
-    $('trendCategory').value=
-      t?.categoryId||cats[0]?.id||'';
-  }
+<option value="none">
+All times
+</option>
 
-  if($('trendCompare')){
-    $('trendCompare').value=
-      t?.compare||'none';
-  }
+<option value="daynight">
+Day vs night
+</option>
 
-  if($('trendPeriod')){
-    $('trendPeriod').value=
-      t?.period||'all';
-  }
+</select>
 
-  if($('trendFrom')){
-    $('trendFrom').value=
-      t?.fromCategoryId||cats[0]?.id||'';
-  }
+</div>
 
-  if($('trendTo')){
-    $('trendTo').value=
-      t?.toCategoryId||cats[0]?.id||'';
-  }
+`;
 
-  if($('trendWindow')){
-    $('trendWindow').value=
-      t?.windowHours||24;
-  }
+}
+
+
+if(
+m==='count'||
+m==='totalduration'
+){
+
+html+=`
+
+<div class="formrow">
+
+<label>
+Time period
+</label>
+
+<select id="trendPeriod">
+
+<option value="all">
+Any time
+</option>
+
+<option value="day">
+Day
+</option>
+
+<option value="night">
+Night
+</option>
+
+</select>
+
+</div>
+
+`;
+
+}
+
+}else{
+
+let a=
+t?.fromCategoryId||
+cats[0]?.id||
+'';
+
+
+let b=
+t?.toCategoryId||
+cats[0]?.id||
+'';
+
+
+html+=`
+
+<div class="formrow">
+
+<label>
+Starting event
+</label>
+
+<select id="trendFrom">
+${catOptions}
+</select>
+
+</div>
+
+
+<div class="formrow">
+
+<label>
+Ending event
+</label>
+
+<select id="trendTo">
+${catOptions}
+</select>
+
+</div>
+
+
+<div class="formrow">
+
+<label>
+Maximum time to connect events
+</label>
+
+<select id="trendWindow">
+
+<option value="1">1 hour</option>
+<option value="2">2 hours</option>
+<option value="4">4 hours</option>
+<option value="8">8 hours</option>
+<option value="12">12 hours</option>
+<option value="24">24 hours</option>
+<option value="48">48 hours</option>
+
+</select>
+
+</div>
+
+`;
+
+}
+
+
+$('trendFields').innerHTML=html;
+
+
+if($('trendCategory'))
+$('trendCategory').value=
+t?.categoryId||
+cats[0]?.id||
+'';
+
+
+if($('trendCompare'))
+$('trendCompare').value=
+t?.compare||
+'none';
+
+
+if($('trendPeriod'))
+$('trendPeriod').value=
+t?.period||
+'all';
+
+
+if($('trendFrom'))
+$('trendFrom').value=
+t?.fromCategoryId||
+cats[0]?.id||
+'';
+
+
+if($('trendTo'))
+$('trendTo').value=
+t?.toCategoryId||
+cats[0]?.id||
+'';
+
+
+if($('trendWindow'))
+$('trendWindow').value=
+t?.windowHours||
+24;
+
 }
 
 
 function openTrendEditor(t){
 
-  openModal(
-    t?'Edit trend':'Create trend',
-    trendEditorHTML(t)
-  );
+openModal(
+t?'Edit trend':'Create trend',
+trendEditorHTML(t)
+);
 
-  fillTrendFields(t);
 
-  $('trendMeasure').onchange=
-    ()=>fillTrendFields(t);
+fillTrendFields(t);
+
+
+$('trendMeasure').onchange=
+()=>{
+fillTrendFields(t);
+};
+
 }
 
 
-$('addTrendBtn').onclick=()=>
-  openTrendEditor(null);
+$('addTrendBtn').onclick=
+()=>openTrendEditor(null);
 
 
 window.saveTrend=id=>{
 
-  let t=trends.find(x=>x.id===id);
+let t=
+trends.find(x=>x.id===id);
 
-  let obj=t||{
-    id:crypto.randomUUID()
-  };
 
-  obj.name=
-    $('trendName').value.trim()||
-    'My trend';
-
-  obj.measure=
-    $('trendMeasure').value;
-
-  if([
-    'interval',
-    'duration',
-    'count',
-    'totalduration'
-  ].includes(obj.measure)){
-
-    obj.categoryId=
-      $('trendCategory').value;
-
-    obj.compare=
-      $('trendCompare')?.value||
-      'none';
-
-    obj.period=
-      $('trendPeriod')?.value||
-      'all';
-
-  }else{
-
-    obj.fromCategoryId=
-      $('trendFrom').value;
-
-    obj.toCategoryId=
-      $('trendTo').value;
-
-    obj.windowHours=
-      Number($('trendWindow').value)||
-      24;
-  }
-
-  if(!t){
-    trends.push(obj);
-  }
-
-  save();
-
-  $('modal').classList.remove('show');
-
-  renderTrends();
+let obj=
+t||
+{
+id:crypto.randomUUID()
 };
 
 
+obj.name=
+$('trendName').value.trim()||
+'My trend';
+
+
+obj.measure=
+$('trendMeasure').value;
+
+
+if(
+[
+'interval',
+'duration',
+'count',
+'totalduration'
+].includes(obj.measure)
+){
+
+obj.categoryId=
+$('trendCategory').value;
+
+obj.compare=
+$('trendCompare')?.value||
+'none';
+
+obj.period=
+$('trendPeriod')?.value||
+'all';
+
+}else{
+
+obj.fromCategoryId=
+$('trendFrom').value;
+
+obj.toCategoryId=
+$('trendTo').value;
+
+obj.windowHours=
+Number($('trendWindow').value)||
+24;
+
+}
+
+
+if(!t)
+trends.push(obj);
+
+
+save();
+
+$('modal').classList.remove('show');
+
+renderTrends();
+
+};
+
+
+/* =========================================================
+   CHART
+   ========================================================= */
+
 function drawChart(){
 
-  let canvas=$('chart');
+let canvas=$('chart');
 
-  let ctx=canvas.getContext('2d');
+let ctx=canvas.getContext('2d');
 
-  let w=canvas.clientWidth*devicePixelRatio;
+let w=
+canvas.clientWidth*
+devicePixelRatio;
 
-  let h=230*devicePixelRatio;
+let h=
+230*
+devicePixelRatio;
 
-  canvas.width=w;
 
-  canvas.height=h;
+canvas.width=w;
+canvas.height=h;
 
-  ctx.clearRect(0,0,w,h);
+ctx.clearRect(0,0,w,h);
 
-  ctx.font=
-    `${12*devicePixelRatio}px -apple-system`;
+ctx.font=
+`${12*devicePixelRatio}px -apple-system`;
 
-  let now=new Date();
 
-  let days=[];
+let now=new Date();
 
-  for(
-    let i=activeRange-1;
-    i>=0;
-    i--
-  ){
+let days=[];
 
-    let d=new Date(now);
 
-    d.setHours(0,0,0,0);
+for(
+let i=activeRange-1;
+i>=0;
+i--
+){
 
-    d.setDate(
-      d.getDate()-i
-    );
+let d=new Date(now);
 
-    days.push(d);
-  }
+d.setHours(0,0,0,0);
 
-  let max=Math.max(
-    1,
-    ...days.map(d=>
-      ['pee','poop'].reduce(
-        (n,id)=>
-          n+
-          events.filter(e=>
-            e.categoryId===id&&
-            new Date(eventTime(e)).toDateString()===
-            d.toDateString()
-          ).length,
-        0
-      )
-    )
-  );
+d.setDate(
+d.getDate()-i
+);
 
-  ctx.strokeStyle='#dfe5e2';
+days.push(d);
 
-  ctx.fillStyle='#697674';
+}
 
-  ctx.lineWidth=1;
 
-  for(let i=0;i<=max;i++){
+let max=Math.max(
+1,
+...days.map(
+d=>
+['pee','poop'].reduce(
+(n,id)=>
+n+
+events.filter(
+e=>
+e.categoryId===id &&
+new Date(eventTime(e)).toDateString()===
+d.toDateString()
+).length,
+0
+)
+)
+);
 
-    let y=
-      h-25-
-      (h-55)*i/max;
 
-    ctx.beginPath();
+ctx.strokeStyle='#dfe5e2';
+ctx.fillStyle='#697674';
+ctx.lineWidth=1;
 
-    ctx.moveTo(30,y);
 
-    ctx.lineTo(w-10,y);
+for(let i=0;i<=max;i++){
 
-    ctx.stroke();
+let y=
+h-25-
+(h-55)*i/max;
 
-    ctx.fillText(
-      i,
-      8,
-      y+4
-    );
-  }
+ctx.beginPath();
 
-  days.forEach((d,i)=>{
+ctx.moveTo(30,y);
 
-    let x=
-      45+
-      i*((w-60)/Math.max(1,days.length-1));
+ctx.lineTo(w-10,y);
 
-    let pee=
-      events.filter(e=>
-        e.categoryId==='pee'&&
-        new Date(eventTime(e)).toDateString()===
-        d.toDateString()
-      ).length;
+ctx.stroke();
 
-    let poop=
-      events.filter(e=>
-        e.categoryId==='poop'&&
-        new Date(eventTime(e)).toDateString()===
-        d.toDateString()
-      ).length;
+ctx.fillText(
+i,
+8,
+y+4
+);
 
-    ctx.fillStyle='#0f5b55';
+}
 
-    ctx.fillRect(
-      x-9,
-      h-25-(h-55)*pee/max,
-      8,
-      (h-55)*pee/max
-    );
 
-    ctx.fillStyle='#d98a27';
+days.forEach((d,i)=>{
 
-    ctx.fillRect(
-      x+1,
-      h-25-(h-55)*poop/max,
-      8,
-      (h-55)*poop/max
-    );
+let x=
+45+
+i*
+(
+(w-60)/
+Math.max(1,days.length-1)
+);
 
-    ctx.fillStyle='#697674';
 
-    ctx.fillText(
-      d.toLocaleDateString([],{
-        month:'numeric',
-        day:'numeric'
-      }),
-      x-12,
-      h-8
-    );
+let pee=
+events.filter(
+e=>
+e.categoryId==='pee' &&
+new Date(eventTime(e)).toDateString()===
+d.toDateString()
+).length;
 
-  });
+
+let poop=
+events.filter(
+e=>
+e.categoryId==='poop' &&
+new Date(eventTime(e)).toDateString()===
+d.toDateString()
+).length;
+
+
+ctx.fillStyle='#0f5b55';
+
+ctx.fillRect(
+x-9,
+h-25-
+(h-55)*pee/max,
+8,
+(h-55)*pee/max
+);
+
+
+ctx.fillStyle='#d98a27';
+
+ctx.fillRect(
+x+1,
+h-25-
+(h-55)*poop/max,
+8,
+(h-55)*poop/max
+);
+
+
+ctx.fillStyle='#697674';
+
+ctx.fillText(
+d.toLocaleDateString(
+[],
+{
+month:'numeric',
+day:'numeric'
+}
+),
+x-12,
+h-8
+);
+
+});
+
 }
 
 
 $('rangePills').onclick=e=>{
 
-  if(e.target.dataset.days){
+if(e.target.dataset.days){
 
-    activeRange=
-      Number(e.target.dataset.days);
+activeRange=
+Number(e.target.dataset.days);
 
-    document
-      .querySelectorAll('.pill')
-      .forEach(x=>
-        x.classList.toggle(
-          'active',
-          x===e.target
-        )
-      );
 
-    renderTrends();
-  }
+document
+.querySelectorAll('.pill')
+.forEach(
+x=>
+x.classList.toggle(
+'active',
+x===e.target
+)
+);
+
+
+renderTrends();
+
+}
+
 };
 
 
+/* =========================================================
+   HISTORY
+   ========================================================= */
+
 function renderHistory(){
 
-  let q=
-    $('search').value.toLowerCase();
+let q=
+$('search')
+.value
+.toLowerCase();
 
-  let a=[...events]
-    .sort(
-      (x,y)=>
-        new Date(eventTime(y))-
-        new Date(eventTime(x))
-    )
-    .filter(e=>
-      (
-        nameFor(e.categoryId)+
-        ' '+
-        e.notes
-      )
-      .toLowerCase()
-      .includes(q)
-    );
 
-  $('historyList').innerHTML=
-    a.length
-      ?a.map(e=>{
+let a=
+[...events]
+.sort(
+(x,y)=>
+new Date(eventTime(y))-
+new Date(eventTime(x))
+)
+.filter(
+e=>
+(
+nameFor(e.categoryId)+
+' '+
+e.notes
+)
+.toLowerCase()
+.includes(q)
+);
 
-        let detail=
-          fmtDate(eventTime(e))+
-          ' · '+
-          (
-            e.kind==='timed'
-              ?fmtTime(e.start)+
-                (
-                  e.end
-                    ?' · '+
-                      dur(
-                        new Date(e.end)-
-                        new Date(e.start)
-                      )
-                    :' · Active'
-                )
-              :fmtTime(e.time)
-          );
 
-        return `
-          <div class="row">
+$('historyList').innerHTML=
+a.length
+?a.map(e=>{
 
-            <span>${iconFor(e.categoryId)}</span>
+let detail=
+fmtDate(eventTime(e))+
+' · '+
+(
+e.kind==='timed'
+?fmtTime(e.start)+
+(
+e.end
+?' · '+dur(new Date(e.end)-new Date(e.start))
+:' · Active'
+)
+:fmtTime(e.time)
+);
 
-            <div class="grow">
 
-              <b>${esc(nameFor(e.categoryId))}</b>
+return `
 
-              <div class="muted">
-                ${detail}${e.qty!=null?' · '+e.qty:''}
-              </div>
+<div class="row">
 
-              ${e.notes
-                ?`<div class="muted">${esc(e.notes)}</div>`
-                :''}
+<span>
+${iconFor(e.categoryId)}
+</span>
 
-            </div>
+<div class="grow">
 
-            <button
-              class="smallbtn"
-              onclick="editEvent('${e.id}')">
-              Edit
-            </button>
+<b>
+${esc(nameFor(e.categoryId))}
+</b>
 
-          </div>
-        `;
+<div class="muted">
 
-      }).join('')
-      :'<div class="empty">No matching events.</div>';
+${detail}
+${e.qty!=null?' · '+e.qty:''}
+
+</div>
+
+${e.notes
+?`<div class="muted">${esc(e.notes)}</div>`
+:''}
+
+</div>
+
+<button
+class="smallbtn"
+onclick="editEvent('${e.id}')">
+
+Edit
+
+</button>
+
+</div>
+
+`;
+
+}).join('')
+:
+'<div class="empty">No matching events.</div>';
+
 }
 
 
-$('search').oninput=renderHistory;
+$('search').oninput=
+renderHistory;
 
+
+/* =========================================================
+   CATEGORIES
+   ========================================================= */
 
 function renderSettings(){
 
-  $('dayStart').value=
-    settings.dayStart;
+$('dayStart').value=
+settings.dayStart;
 
-  $('nightStart').value=
-    settings.nightStart;
+$('nightStart').value=
+settings.nightStart;
 
-  $('categoryList').innerHTML=
-    cats.map(c=>`
 
-      <div class="row">
+$('categoryList').innerHTML=
+cats.map(c=>`
 
-        <span>${c.icon}</span>
+<div class="row">
 
-        <div class="grow">
+<span>${c.icon}</span>
 
-          <b>${esc(c.name)}</b>
+<div class="grow">
 
-          <div>
-            <span class="badge">
-              ${esc(c.kind)}
-            </span>
-          </div>
+<b>
+${esc(c.name)}
+</b>
 
-        </div>
+<div>
 
-        <button
-          class="secondary mini"
-          onclick="editCategory('${esc(c.id)}')">
-          Edit
-        </button>
+<span class="badge">
+${esc(c.kind)}
+</span>
 
-        ${
-          !builtins.some(b=>b.id===c.id)
-            ?`
-              <button
-                class="smallbtn"
-                onclick="removeCat('${esc(c.id)}')">
-                Delete
-              </button>
-            `
-            :''
-        }
+</div>
 
-      </div>
+</div>
 
-    `).join('');
+
+<button
+class="secondary mini"
+onclick="editCategory('${esc(c.id)}')">
+
+Edit
+
+</button>
+
+
+${
+!builtins.some(b=>b.id===c.id)
+?
+`
+<button
+class="smallbtn"
+onclick="removeCat('${esc(c.id)}')">
+
+Delete
+
+</button>
+`
+:''
+}
+
+</div>
+
+`).join('');
+
 }
 
 
 function categoryEditorHTML(c){
 
-  return `
-    <div class="formrow">
-      <label>Name</label>
-      <input
-        id="catName"
-        value="${esc(c?.name||'')}"
-        placeholder="e.g. Play">
-    </div>
+return `
 
-    <div class="formrow">
-      <label>Icon</label>
-      <input
-        id="catIcon"
-        value="${esc(c?.icon||'🐾')}">
-    </div>
+<div class="formrow">
 
-    <div class="formrow">
-      <label>Type</label>
+<label>Name</label>
 
-      <select id="catKind">
+<input
+id="catName"
+value="${esc(c?.name||'')}"
+placeholder="e.g. Play">
 
-        <option value="instant"
-          ${c?.kind==='instant'?'selected':''}>
-          One-time event
-        </option>
+</div>
 
-        <option value="timed"
-          ${c?.kind==='timed'?'selected':''}>
-          Timed event
-        </option>
 
-        <option value="quantity"
-          ${c?.kind==='quantity'?'selected':''}>
-          Quantity event
-        </option>
+<div class="formrow">
 
-      </select>
-    </div>
+<label>Icon</label>
 
-    <div class="formrow">
-      <label>Quantity label</label>
+<input
+id="catIcon"
+value="${esc(c?.icon||'🐾')}">
 
-      <input
-        id="catQtyLabel"
-        value="${esc(c?.quantityLabel||'Amount')}"
-        placeholder="e.g. cups, oz, treats">
-    </div>
+</div>
 
-    <div class="checkrow">
 
-      <input
-        type="checkbox"
-        id="catNotes"
-        ${c?.notesRequired?'checked':''}>
+<div class="formrow">
 
-      <label for="catNotes">
-        Require notes when logging this category
-      </label>
+<label>Type</label>
 
-    </div>
+<select id="catKind">
 
-    <button
-      class="primary"
-      onclick="saveCategory('${esc(c?.id||'')}')">
-      Save category
-    </button>
+<option
+value="instant"
+${c?.kind==='instant'?'selected':''}>
 
-    ${
-      c
-        ?`
-          <button
-            class="secondary"
-            onclick="deleteCategoryFromEditor('${esc(c.id)}')">
-            Delete
-          </button>
-        `
-        :''
-    }
-  `;
+One-time event
+
+</option>
+
+<option
+value="timed"
+${c?.kind==='timed'?'selected':''}>
+
+Timed event
+
+</option>
+
+<option
+value="quantity"
+${c?.kind==='quantity'?'selected':''}>
+
+Quantity event
+
+</option>
+
+</select>
+
+</div>
+
+
+<div class="formrow">
+
+<label>
+Quantity label
+</label>
+
+<input
+id="catQtyLabel"
+value="${esc(c?.quantityLabel||'Amount')}"
+placeholder="e.g. cups, oz, treats">
+
+</div>
+
+
+<div class="checkrow">
+
+<input
+type="checkbox"
+id="catNotes"
+${c?.notesRequired?'checked':''}>
+
+<label for="catNotes">
+Require notes when logging this category
+</label>
+
+</div>
+
+
+<button
+class="primary"
+onclick="saveCategory('${esc(c?.id||'')}')">
+
+Save category
+
+</button>
+
+${
+c
+?
+`
+<button
+class="secondary"
+onclick="deleteCategoryFromEditor('${esc(c.id)}')">
+
+Delete
+
+</button>
+`
+:''
+}
+
+`;
+
 }
 
 
 function openCategoryEditor(c){
-  openModal(
-    c?'Edit category':'New category',
-    categoryEditorHTML(c)
-  );
+
+openModal(
+c?'Edit category':'New category',
+categoryEditorHTML(c)
+);
+
 }
 
 
 window.editCategory=id=>
-  openCategoryEditor(catById(id));
+openCategoryEditor(
+catById(id)
+);
 
-$('addCategoryBtn').onclick=()=>
-  openCategoryEditor(null);
+
+$('addCategoryBtn').onclick=
+()=>openCategoryEditor(null);
 
 
 window.saveCategory=id=>{
 
-  let name=
-    $('catName').value.trim();
+let name=
+$('catName')
+.value
+.trim();
 
-  if(!name){
-    alert('Please enter a category name.');
-    return;
-  }
 
-  let existing=
-    id?catById(id):null;
+if(!name){
 
-  if(existing){
+alert(
+'Please enter a category name.'
+);
 
-    existing.name=name;
+return;
 
-    existing.icon=
-      $('catIcon').value||'🐾';
+}
 
-    existing.kind=
-      $('catKind').value;
 
-    existing.quantityEnabled=
-      existing.kind==='quantity';
+let existing=
+id
+?catById(id)
+:null;
 
-    existing.quantityLabel=
-      $('catQtyLabel').value||'Amount';
 
-    existing.notesRequired=
-      $('catNotes').checked;
+if(existing){
 
-  }else{
+existing.name=name;
 
-    cats.push({
-      id:crypto.randomUUID(),
-      name,
-      icon:$('catIcon').value||'🐾',
-      kind:$('catKind').value,
-      quantityEnabled:
-        $('catKind').value==='quantity',
-      quantityLabel:
-        $('catQtyLabel').value||'Amount',
-      notesRequired:
-        $('catNotes').checked
-    });
-  }
+existing.icon=
+$('catIcon').value||
+'🐾';
 
-  save();
+existing.kind=
+$('catKind').value;
 
-  $('modal').classList.remove('show');
+existing.quantityEnabled=
+existing.kind==='quantity';
 
-  renderAll();
+existing.quantityLabel=
+$('catQtyLabel').value||
+'Amount';
+
+existing.notesRequired=
+$('catNotes').checked;
+
+}else{
+
+cats.push({
+
+id:crypto.randomUUID(),
+
+name,
+
+icon:
+$('catIcon').value||
+'🐾',
+
+kind:
+$('catKind').value,
+
+quantityEnabled:
+$('catKind').value==='quantity',
+
+quantityLabel:
+$('catQtyLabel').value||
+'Amount',
+
+notesRequired:
+$('catNotes').checked
+
+});
+
+}
+
+
+save();
+
+$('modal').classList.remove('show');
+
+renderAll();
+
 };
 
 
 window.deleteCategoryFromEditor=id=>{
 
-  if(confirm(
-    'Delete this category? Existing events will remain in your data but will be shown as Unknown until you restore the category.'
-  )){
+if(
+confirm(
+'Delete this category? Existing events will remain in your data but will be shown as Unknown until you restore the category.'
+)
+){
 
-    cats=cats.filter(c=>c.id!==id);
+cats=
+cats.filter(
+c=>c.id!==id
+);
 
-    save();
+save();
 
-    $('modal').classList.remove('show');
+$('modal').classList.remove('show');
 
-    renderAll();
-  }
+renderAll();
+
+}
+
 };
 
 
 window.removeCat=id=>{
 
-  if(confirm('Delete this category?')){
+if(confirm('Delete this category?')){
 
-    cats=cats.filter(c=>c.id!==id);
+cats=
+cats.filter(
+c=>c.id!==id
+);
 
-    save();
+save();
 
-    renderAll();
-  }
+renderAll();
+
+}
+
 };
 
 
 $('saveTimes').onclick=()=>{
 
-  settings.dayStart=
-    $('dayStart').value;
+settings.dayStart=
+$('dayStart').value;
 
-  settings.nightStart=
-    $('nightStart').value;
+settings.nightStart=
+$('nightStart').value;
 
-  save();
+save();
 
-  alert('Saved');
+alert('Saved');
+
 };
 
+
+/* =========================================================
+   EXPORT
+   ========================================================= */
 
 $('exportBtn').onclick=()=>{
 
-  let rows=[
-    [
-      'id',
-      'category_id',
-      'event',
-      'event_type',
-      'time',
-      'start',
-      'end',
-      'duration_seconds',
-      'quantity',
-      'notes',
-      'day_or_night'
-    ]
-  ];
+let rows=[
 
-  for(let e of events){
+[
+'id',
+'category_id',
+'event',
+'event_type',
+'time',
+'start',
+'end',
+'duration_seconds',
+'quantity',
+'notes',
+'day_or_night'
+]
 
-    let d=
-      new Date(eventTime(e));
-
-    let hm=
-      d.toTimeString().slice(0,5);
-
-    let night=
-      hm>=settings.nightStart||
-      hm<settings.dayStart
-        ?'Night'
-        :'Day';
-
-    let start='';
-    let end='';
-    let duration='';
-    let time=
-      e.kind==='timed'
-        ?''
-        :e.time;
-
-    if(e.kind==='timed'){
-
-      start=e.start;
-
-      end=e.end||'';
-
-      duration=
-        e.end
-          ?(
-            (new Date(e.end)-
-            new Date(e.start))/1000
-          )
-          :'';
-    }
-
-    rows.push([
-      e.id,
-      e.categoryId,
-      nameFor(e.categoryId),
-      e.kind,
-      time,
-      start,
-      end,
-      duration,
-      e.qty??'',
-      e.notes,
-      night
-    ]);
-  }
-
-  let csv=
-    rows
-      .map(r=>
-        r
-          .map(v=>
-            `"${String(v).replaceAll('"','""')}"`
-          )
-          .join(',')
-      )
-      .join('\n');
-
-  let blob=
-    new Blob(
-      [csv],
-      {type:'text/csv'}
-    );
-
-  let url=
-    URL.createObjectURL(blob);
-
-  let a=
-    document.createElement('a');
-
-  a.href=url;
-
-  a.download=
-    'puppy_tracker.csv';
-
-  a.click();
-
-  URL.revokeObjectURL(url);
-};
+];
 
 
-$('backupBtn').onclick=()=>{
+for(let e of events){
 
-  const raw=
-    localStorage.getItem(BACKUPKEY);
+let d=
+new Date(eventTime(e));
 
-  if(!raw){
+let hm=
+d.toTimeString().slice(0,5);
 
-    alert(
-      'No original-data backup was found.'
-    );
-
-    return;
-  }
-
-  const blob=
-    new Blob(
-      [raw],
-      {type:'application/json'}
-    );
-
-  const url=
-    URL.createObjectURL(blob);
-
-  const a=
-    document.createElement('a');
-
-  a.href=url;
-
-  a.download=
-    'puppy_tracker_original_backup.json';
-
-  a.click();
-
-  URL.revokeObjectURL(url);
-};
+let night=
+hm>=settings.nightStart||
+hm<settings.dayStart
+?'Night'
+:'Day';
 
 
-document
-  .querySelectorAll('nav button')
-  .forEach(b=>
+let start='';
+let end='';
+let duration='';
 
-    b.onclick=()=>{
-
-      document
-        .querySelectorAll('nav button')
-        .forEach(x=>
-          x.classList.remove('active')
-        );
-
-      b.classList.add('active');
-
-      document
-        .querySelectorAll('.view')
-        .forEach(v=>
-          v.classList.remove('active')
-        );
-
-      $(b.dataset.view)
-        .classList.add('active');
-
-      renderAll();
-    }
-  );
+let time=
+e.kind==='timed'
+?''
+:e.time;
 
 
-function renderAll(){
+if(e.kind==='timed'){
 
-  $('date').textContent=
-    new Date().toLocaleDateString([],{
-      weekday:'long',
-      month:'long',
-      day:'numeric'
-    });
+start=e.start;
 
-  renderQuick();
-  renderToday();
-  renderTrends();
-  renderHistory();
-  renderSettings();
+end=e.end||'';
+
+duration=
+e.end
+?(
+(
+new Date(e.end)-
+new Date(e.start)
+)/1000
+)
+:'';
+
 }
 
 
+rows.push([
+
+e.id,
+
+e.categoryId,
+
+nameFor(e.categoryId),
+
+e.kind,
+
+time,
+
+start,
+
+end,
+
+duration,
+
+e.qty??'',
+
+e.notes,
+
+night
+
+]);
+
+}
+
+
+let csv=
+rows
+.map(
+r=>
+r.map(
+v=>
+`"${String(v).replaceAll('"','""')}"`
+).join(',')
+)
+.join('\n');
+
+
+let blob=
+new Blob(
+[csv],
+{
+type:'text/csv'
+}
+);
+
+
+let url=
+URL.createObjectURL(blob);
+
+
+let a=
+document.createElement('a');
+
+a.href=url;
+
+a.download=
+'puppy_tracker.csv';
+
+a.click();
+
+URL.revokeObjectURL(url);
+
+};
+
+
+/* =========================================================
+   ORIGINAL BACKUP
+   ========================================================= */
+
+$('backupBtn').onclick=()=>{
+
+const raw=
+localStorage.getItem(
+BACKUPKEY
+);
+
+
+if(!raw){
+
+alert(
+'No original-data backup was found.'
+);
+
+return;
+
+}
+
+
+const blob=
+new Blob(
+[raw],
+{
+type:'application/json'
+}
+);
+
+
+const url=
+URL.createObjectURL(blob);
+
+
+const a=
+document.createElement('a');
+
+a.href=url;
+
+a.download=
+'puppy_tracker_original_backup.json';
+
+a.click();
+
+URL.revokeObjectURL(url);
+
+};
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+document
+.querySelectorAll('nav button')
+.forEach(
+b=>
+
+b.onclick=()=>{
+
+document
+.querySelectorAll('nav button')
+.forEach(
+x=>
+x.classList.remove('active')
+);
+
+
+b.classList.add('active');
+
+
+document
+.querySelectorAll('.view')
+.forEach(
+v=>
+v.classList.remove('active')
+);
+
+
+$(b.dataset.view)
+.classList.add('active');
+
+
 renderAll();
+
+}
+
+);
+
+
+/* =========================================================
+   RENDER EVERYTHING
+   ========================================================= */
+
+function renderAll(){
+
+$('date').textContent=
+new Date().toLocaleDateString(
+[],
+{
+weekday:'long',
+month:'long',
+day:'numeric'
+}
+);
+
+renderQuick();
+renderToday();
+renderTrends();
+renderHistory();
+renderSettings();
+
+}
+
+
+/* =========================================================
+   START APP
+   ========================================================= */
+
+renderAll();
+
 </script>
+
+</body>
+</html>
 ```
